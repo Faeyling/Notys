@@ -1,0 +1,192 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Mic, FileText, Folder } from 'lucide-react';
+import { PALETTE, DEFAULT_COLOR } from '@/lib/constants';
+import ColorPicker from './ColorPicker';
+
+export default function CreateModal({
+  show,
+  onClose,
+  onSave,
+  folders = [],
+  parentFolderId = null,
+  defaultColor = null,
+  /** 'note' | 'folder' | 'voice' — pre-selects the tab when the modal opens */
+  defaultType = 'note',
+}) {
+  const [type, setType]       = useState(defaultType || 'note');
+  const [title, setTitle]     = useState('');
+  const [content, setContent] = useState('');
+  const [color, setColor]     = useState(defaultColor || DEFAULT_COLOR);
+  const [folderId, setFolderId] = useState(parentFolderId || '');
+
+  useEffect(() => {
+    if (show) {
+      setTitle('');
+      setContent('');
+      setColor(defaultColor || DEFAULT_COLOR);
+      setFolderId(parentFolderId || '');
+      /* Respect the requested default type every time the modal opens */
+      setType(defaultType || 'note');
+    }
+  }, [show, parentFolderId, defaultColor, defaultType]);
+
+  const handleSave = () => {
+    if (!title.trim()) return;
+    onSave({ title: title.trim(), content, color, is_favorite: false, folder_id: folderId || null, type });
+    onClose();
+  };
+
+  if (!show) return null;
+
+  const tabs = [
+    { id: 'note',   label: 'Note',    Icon: FileText },
+    { id: 'folder', label: 'Dossier', Icon: Folder   },
+    { id: 'voice',  label: 'Vocale',  Icon: Mic      },
+  ];
+
+  const pal = PALETTE.find(p => p.bg === color) || PALETTE[8];
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="create-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)' }}
+        onClick={onClose}
+      >
+        <motion.div
+          key="create-sheet"
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+          onClick={e => e.stopPropagation()}
+          className="w-full max-w-lg rounded-t-3xl p-6 pb-10 shadow-2xl"
+          style={{ background: 'white' }}
+        >
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+              Créer {type === 'folder' ? 'un dossier' : 'une note'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: '#F5F5F5' }}
+            >
+              <X size={16} style={{ color: '#6B7280' }} />
+            </button>
+          </div>
+
+          {/* Type tabs */}
+          <div className="flex rounded-2xl overflow-hidden mb-5 p-1 gap-1" style={{ background: '#F5F5F5' }}>
+            {tabs.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setType(id)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all duration-200"
+                style={{
+                  background: type === id ? pal.bg : 'transparent',
+                  color: type === id ? pal.fg : '#9CA3AF',
+                  fontFamily: 'Quicksand, sans-serif',
+                }}
+              >
+                <Icon size={13} /> {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              placeholder={type === 'folder' ? 'Nom du dossier...' : 'Titre de la note...'}
+              autoFocus
+              className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all"
+              style={{
+                borderColor: pal.bg,
+                background: `${pal.bg}22`,
+                color: '#111827',
+                fontFamily: 'Quicksand, sans-serif',
+              }}
+            />
+
+            {type === 'note' && (
+              <textarea
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                placeholder="Contenu (Markdown supporté)..."
+                rows={3}
+                className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all resize-none"
+                style={{
+                  borderColor: pal.bg,
+                  background: `${pal.bg}22`,
+                  color: '#111827',
+                  fontFamily: 'Quicksand, sans-serif',
+                }}
+              />
+            )}
+
+            {type === 'voice' && (
+              <div
+                className="rounded-2xl px-4 py-3 text-sm text-center border-2"
+                style={{ borderColor: pal.bg, background: `${pal.bg}22`, color: pal.fg }}
+              >
+                <Mic size={20} className="mx-auto mb-1" />
+                <p style={{ fontFamily: 'Quicksand, sans-serif', fontSize: 12 }}>
+                  La note vocale sera enregistrée après création
+                </p>
+              </div>
+            )}
+
+            {type !== 'folder' && (
+              <select
+                value={folderId}
+                onChange={e => setFolderId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 appearance-none"
+                style={{
+                  borderColor: pal.bg,
+                  background: `${pal.bg}22`,
+                  color: folderId ? '#111827' : '#9CA3AF',
+                  fontFamily: 'Quicksand, sans-serif',
+                }}
+              >
+                <option value="">Aucun dossier</option>
+                {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            )}
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
+                Couleur
+              </p>
+              <ColorPicker value={color} onChange={setColor} />
+            </div>
+
+            <motion.button
+              onClick={handleSave}
+              disabled={!title.trim()}
+              whileHover={{ scale: title.trim() ? 1.02 : 1 }}
+              whileTap={{ scale: title.trim() ? 0.97 : 1 }}
+              className="w-full py-3.5 rounded-2xl font-bold text-sm mt-1"
+              style={{
+                background: title.trim() ? pal.bg : '#F3F4F6',
+                color: title.trim() ? pal.fg : '#9CA3AF',
+                fontFamily: 'Quicksand, sans-serif',
+                boxShadow: title.trim() ? `0 4px 20px ${pal.bg}88` : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              Créer ✨
+            </motion.button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}

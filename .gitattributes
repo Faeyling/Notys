@@ -1,0 +1,25 @@
+# Normalize line endings: store LF in repo, checkout with native endings
+* text=auto
+
+# Force LF for source files (consistent across Windows/macOS/Linux)
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sh    text eol=lf
+
+# Apache config — must be LF
+.htaccess text eol=lf
+
+# Binaries — no text processing
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.woff2 binary
+*.woff  binary

@@ -1,0 +1,81 @@
+# ═══════════════════════════════════════════════════════════
+#  Noty's – Apache config for O2 Switch / cPanel shared hosting
+#  Place this file in public/ → Vite copies it verbatim to dist/
+# ═══════════════════════════════════════════════════════════
+
+# ── 1. Gzip compression ────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE font/woff2
+    AddOutputFilterByType DEFLATE font/woff
+</IfModule>
+
+# ── 2. Browser caching ─────────────────────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # index.html: never cache (always serve fresh)
+    <FilesMatch "^index\.html$">
+        ExpiresDefault "access plus 0 seconds"
+    </FilesMatch>
+
+    # Vite hashes JS/CSS/image filenames → safe to cache 1 year
+    <FilesMatch "\.(js|css|woff2|woff|ttf|png|jpg|jpeg|svg|ico|webp)$">
+        ExpiresDefault "access plus 1 year"
+    </FilesMatch>
+</IfModule>
+
+# ── 3. Cache-Control headers ───────────────────────────────
+<IfModule mod_headers.c>
+    # Hashed assets – cache forever (immutable)
+    <FilesMatch "\.(js|css|woff2|woff|ttf|png|jpg|jpeg|svg|ico|webp)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # HTML – always revalidate
+    <FilesMatch "\.html$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+
+    # Security headers
+    Header always set X-Content-Type-Options  "nosniff"
+    Header always set X-Frame-Options         "SAMEORIGIN"
+    Header always set Referrer-Policy         "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy      "camera=(), microphone=(self), geolocation=()"
+</IfModule>
+
+# ── 4. MIME types ──────────────────────────────────────────
+<IfModule mod_mime.c>
+    AddType application/javascript    .js .mjs
+    AddType text/css                  .css
+    AddType font/woff2                .woff2
+    AddType font/woff                 .woff
+    AddType image/svg+xml             .svg
+    AddType application/manifest+json .webmanifest .json
+</IfModule>
+
+# ── 5. SPA fallback (React Router / client-side nav) ───────
+#    All unresolved paths → index.html so deep-links work.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Skip real files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Rewrite everything else to index.html
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# ── 6. Block dot-files ─────────────────────────────────────
+<FilesMatch "^\.(env|git|gitignore|htpasswd)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
