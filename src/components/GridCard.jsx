@@ -147,51 +147,56 @@ export default function GridCard({
         </div>
       </motion.div>
 
-      {/* Delete confirmation — portal so it's never clipped */}
-      <AnimatePresence>
-        {showDeleteConfirm && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center px-6"
-            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9999 }}
-            onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
-          >
+      {/* Delete confirmation — AnimatePresence lives INSIDE the portal
+          so Framer Motion can track the DOM node it actually controls */}
+      {createPortal(
+        <AnimatePresence>
+          {showDeleteConfirm && (
             <motion.div
-              initial={{ scale: 0.88, opacity: 0 }}
-              animate={{ scale: 1,    opacity: 1 }}
-              exit={{ scale: 0.88,    opacity: 0 }}
-              className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl"
-              onClick={e => e.stopPropagation()}
+              key="delete-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 flex items-center justify-center px-6"
+              style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9999 }}
+              onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
             >
-              <p className="font-bold text-base text-center mb-1" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
-                Supprimer ?
-              </p>
-              <p className="text-sm text-center mb-5" style={{ color: '#6B7280' }}>
-                "{item.title || item.name}" sera supprimé définitivement.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
-                  className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
-                  style={{ background: '#F3F4F6', color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
-                  style={{ background: '#FEE2E2', color: '#dc2626', fontFamily: 'Quicksand, sans-serif' }}
-                >
-                  Supprimer
-                </button>
-              </div>
+              <motion.div
+                key="delete-card"
+                initial={{ scale: 0.88, opacity: 0 }}
+                animate={{ scale: 1,    opacity: 1 }}
+                exit={{ scale: 0.88,    opacity: 0 }}
+                className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <p className="font-bold text-base text-center mb-1" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+                  Supprimer ?
+                </p>
+                <p className="text-sm text-center mb-5" style={{ color: '#6B7280' }}>
+                  "{item.title || item.name}" sera supprimé définitivement.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
+                    className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
+                    style={{ background: '#F3F4F6', color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
+                    style={{ background: '#FEE2E2', color: '#dc2626', fontFamily: 'Quicksand, sans-serif' }}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>,
-          document.body,
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }
