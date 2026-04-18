@@ -344,7 +344,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: pageBg }}>
+      <div className="flex items-center justify-center" style={{ height: '100dvh', background: pageBg }}>
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -357,14 +357,14 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
 
   return (
     <div
-      className={`min-h-screen flex ${landscape ? 'flex-row' : 'flex-col'} relative overflow-hidden`}
-      style={{ background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: landscape ? 'none' : 480, margin: '0 auto' }}
+      className={`flex ${landscape ? 'flex-row' : 'flex-col'} relative overflow-hidden`}
+      style={{ height: '100dvh', background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: landscape ? 'none' : 480, margin: '0 auto' }}
     >
       <DotGrid dark={dark} />
 
       {/* ── Landscape: vertical wave on the left ── */}
       {landscape && (
-        <div className="relative shrink-0 h-screen" style={{ width: 60 }}>
+        <div className="relative shrink-0" style={{ width: 60, height: '100dvh' }}>
           <div className="absolute inset-0" style={{ background: waveColor }} />
           {/* scaleX(-1) flips the wave so bumps point INTO the page content */}
           <div style={{ transform: 'scaleX(-1)', width: '100%', height: '100%' }}>

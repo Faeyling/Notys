@@ -66,8 +66,8 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: 480, margin: '0 auto' }}
+      className="flex flex-col"
+      style={{ height: '100dvh', overflowY: 'auto', background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: 480, margin: '0 auto' }}
     >
       <DotGrid dark={dark} />
 
@@ -119,16 +119,34 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
               </div>
             </div>
 
-            {/* Toggle pill */}
+            {/* Toggle pill — explicit pixel geometry so the thumb is always centred */}
             <button
               onClick={() => onToggleAnimations?.(!animated)}
               aria-label={animated ? 'Désactiver les animations' : 'Activer les animations'}
-              className="relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none"
-              style={{ background: animated ? (dark ? '#dcc6f1' : '#3b0764') : (dark ? '#374151' : '#9CA3AF') }}
+              className="focus:outline-none flex-shrink-0"
+              style={{
+                position: 'relative',
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                background: animated
+                  ? (dark ? '#dcc6f1' : '#3b0764')
+                  : (dark ? '#4b5563' : '#9CA3AF'),
+                transition: 'background 0.25s ease',
+                flexShrink: 0,
+              }}
             >
               <motion.span
-                className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
-                animate={{ x: animated ? 24 : 2 }}
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: 'white',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                }}
+                animate={{ left: animated ? 22 : 2 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             </button>

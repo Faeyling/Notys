@@ -25,7 +25,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', height: '100dvh' }}>
       {/* Home is always mounted, hidden behind Backup */}
       <div style={{ visibility: page === 'backup' ? 'hidden' : 'visible' }}>
         <Home
