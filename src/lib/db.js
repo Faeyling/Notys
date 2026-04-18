@@ -26,11 +26,6 @@ export const NoteDB = {
     await db.notes.update(id, { last_opened_date: now() });
   },
   async delete(id) { await db.notes.delete(id); },
-  async bulkCreate(items) {
-    const records = items.map(i => ({ ...i, created_date: now(), updated_date: now(), last_opened_date: now() }));
-    const ids = await db.notes.bulkAdd(records, { allKeys: true });
-    return records.map((r, i) => ({ ...r, id: ids[i] }));
-  },
   async clear() { await db.notes.clear(); },
 };
 
@@ -47,11 +42,6 @@ export const FolderDB = {
     return { id, ...patch };
   },
   async delete(id) { await db.folders.delete(id); },
-  async bulkCreate(items) {
-    const records = items.map(i => ({ ...i, created_date: now(), updated_date: now() }));
-    const ids = await db.folders.bulkAdd(records, { allKeys: true });
-    return records.map((r, i) => ({ ...r, id: ids[i] }));
-  },
   async clear() { await db.folders.clear(); },
 };
 
@@ -64,6 +54,7 @@ export function sortItems(items, sortId) {
     case 'name_desc': return arr.sort((a, b) => (b.title || b.name || '').localeCompare(a.title || a.name || ''));
     case 'color':     return arr.sort((a, b) => (a.color || '').localeCompare(b.color || ''));
     case 'opened':    return arr.sort((a, b) => (b.last_opened_date || b.updated_date || '').localeCompare(a.last_opened_date || a.updated_date || ''));
+    case 'manual':    return arr.sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER));
     default:          return arr;
   }
 }

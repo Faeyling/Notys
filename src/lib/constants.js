@@ -30,4 +30,5 @@ export const SORT_OPTIONS = [
   { id: 'name_desc',  label: 'Nom Z→A',      icon: '🔡' },
   { id: 'color',      label: 'Par couleur',   icon: '🎨' },
   { id: 'opened',     label: 'Récemment ouvert', icon: '👁' },
+  { id: 'manual',     label: 'Ordre manuel',     icon: '✋' },
 ];

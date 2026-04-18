@@ -55,7 +55,7 @@ function EmptyState({ tab, hasQuery, animated }) {
 }
 
 /* ── Unified grid with DnD ──────────────────────────── */
-function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onMove, onColorChange, onDragEnd, dark }) {
+function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onColorChange, onDragEnd, dark }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="main-grid" direction="horizontal">
@@ -91,7 +91,6 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
                                 onOpen={() => onOpenFolder(item)}
                                 onToggleStar={() => {}}
                                 onDelete={onDelete}
-                                onMove={onMove}
                                 onColorChange={onColorChange}
                                 isDragging={s.isDragging}
                                 dark={dark}
@@ -107,7 +106,6 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
                           onOpen={onOpenNote}
                           onToggleStar={onToggleStar}
                           onDelete={onDelete}
-                          onMove={onMove}
                           onColorChange={onColorChange}
                           isDragging={s.isDragging}
                           dark={dark}
@@ -337,7 +335,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
       const reordered = [...homeItems];
       const [moved] = reordered.splice(source.index, 1);
       reordered.splice(destination.index, 0, moved);
-      /* Persist position index to DB */
+      /* Persist position index to DB + switch to manual sort so order survives reload */
       for (let i = 0; i < reordered.length; i++) {
         const it = reordered[i];
         if (it._type === 'folder') {
@@ -348,6 +346,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           NoteDB.update(it.id, { position: i }).catch(() => {});
         }
       }
+      setSortId('manual');
     }
   };
 
@@ -485,7 +484,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                     onOpenFolder={f => setOpenFolder(f)}
                     onToggleStar={handleToggleStar}
                     onDelete={handleDelete}
-                    onMove={item => setMoveTarget(item)}
                     /* Opens the ColorChangeModal — persisted in handleColorChange */
                     onColorChange={item => setColorTarget(item)}
                     onDragEnd={handleDragEnd}
@@ -511,7 +509,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                         onOpen={openNoteDetail}
                         onToggleStar={handleToggleStar}
                         onDelete={handleDelete}
-                        onMove={item => setMoveTarget(item)}
                         onColorChange={item => setColorTarget(item)}
                         dark={dark}
                       />
@@ -556,7 +553,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                           onOpen={item._type === 'folder' ? f => setOpenFolder(f) : openNoteDetail}
                           onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
                           onDelete={handleDelete}
-                          onMove={i => setMoveTarget(i)}
                           onColorChange={i => setColorTarget(i)}
                           dark={dark}
                         />
@@ -757,7 +753,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           onOpenFolder={f => setOpenFolder(f)}
           onToggleStar={handleToggleStar}
           onDelete={handleDelete}
-          onMove={item => setMoveTarget(item)}
           onColorChange={item => setColorTarget(item)}
           onDragEnd={handleDragEnd}
           dark={dark}
