@@ -388,7 +388,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           style={{ background: waveColor, minHeight: scrolled ? 90 : 130, transition: 'min-height 0.3s ease' }}
         >
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 pt-safe pt-8 pb-1 relative z-10">
+          <div className="flex items-center justify-between px-4 pt-safe pt-12 pb-1 relative z-10">
             {/* Title + mascot below (mascot is static, hidden when header compacts) */}
             <div className="flex flex-col leading-none">
               <h1
