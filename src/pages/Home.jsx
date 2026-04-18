@@ -200,12 +200,21 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
     notes.filter(n => n.is_favorite).map(n => ({ ...n, _type: 'note' })),
     sortId,
   );
-  const searchResults = searchQ.trim()
-    ? notes.filter(n =>
-        n.title?.toLowerCase().includes(searchQ.toLowerCase()) ||
-        n.content?.toLowerCase().includes(searchQ.toLowerCase())
-      ).map(n => ({ ...n, _type: 'note' }))
-    : [];
+  const searchResults = (() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return [];
+    return [
+      /* Folders matching by name */
+      ...foldersWithCount.filter(f => f.name?.toLowerCase().includes(q)),
+      /* Notes matching by title or content */
+      ...notes
+        .filter(n =>
+          n.title?.toLowerCase().includes(q) ||
+          n.content?.toLowerCase().includes(q)
+        )
+        .map(n => ({ ...n, _type: 'note' })),
+    ];
+  })();
 
   /* Folder layer items */
   const folderNotes = openFolder
@@ -539,14 +548,16 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                 : !searchQ
                   ? <EmptyState tab="search" animated={animated} />
                   : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                      {searchResults.map(n => (
+                      {searchResults.map(item => (
                         <GridCard
-                          key={n.id} item={n} type="note"
-                          onOpen={openNoteDetail}
-                          onToggleStar={handleToggleStar}
+                          key={`${item._type}-${item.id}`}
+                          item={item}
+                          type={item._type}
+                          onOpen={item._type === 'folder' ? f => setOpenFolder(f) : openNoteDetail}
+                          onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
                           onDelete={handleDelete}
-                          onMove={item => setMoveTarget(item)}
-                          onColorChange={item => setColorTarget(item)}
+                          onMove={i => setMoveTarget(i)}
+                          onColorChange={i => setColorTarget(i)}
                           dark={dark}
                         />
                       ))}

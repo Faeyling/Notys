@@ -52,8 +52,31 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
       if (!data.notes) throw new Error('Format invalide');
       await db.notes.clear();
       await db.folders.clear();
-      for (const f of (data.folders || [])) { const { id, ...rest } = f; await db.folders.add(rest); }
-      for (const n of (data.notes   || [])) { const { id, ...rest } = n; await db.notes.add(rest);   }
+
+      /* ── Step 1 : insert folders with parent_id=null, build old→new ID map ── */
+      const folderIdMap = {};
+      for (const f of (data.folders || [])) {
+        const { id: oldId, parent_id, ...rest } = f;
+        const newId = await db.folders.add({ ...rest, parent_id: null });
+        if (oldId != null) folderIdMap[oldId] = newId;
+      }
+
+      /* ── Step 2 : restore parent_id using the map (sub-folder hierarchy) ── */
+      for (const f of (data.folders || [])) {
+        if (f.parent_id != null) {
+          const newId       = folderIdMap[f.id];
+          const newParentId = folderIdMap[f.parent_id] ?? null;
+          if (newId != null) await db.folders.update(newId, { parent_id: newParentId });
+        }
+      }
+
+      /* ── Step 3 : insert notes with remapped folder_id ── */
+      for (const n of (data.notes || [])) {
+        const { id, folder_id, ...rest } = n;
+        const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
+        await db.notes.add({ ...rest, folder_id: newFolderId });
+      }
+
       setStatus('success');
       setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);
     } catch {
