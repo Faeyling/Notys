@@ -439,7 +439,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden px-4 pb-2"
+                className="overflow-hidden px-4 pb-2 -mt-4"
               >
                 <SortMenu value={sortId} onChange={v => { setSortId(v); setShowSort(false); }} />
               </motion.div>
