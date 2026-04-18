@@ -1,36 +1,59 @@
-# ── Dependencies ─────────────────────────────────────────
+# ── Dependencies ──────────────────────────────────────────────────────────────
+# Dossier installé par "npm install". Jamais commité :
+# il est énorme (~200 Mo), reproductible via "npm ci", et contient
+# des binaires compilés pour la machine locale.
 node_modules/
+
+# Plug'n'Play (alternative à node_modules, Yarn Berry)
 .pnp
 .pnp.js
 
-# ── Build output ──────────────────────────────────────────
+# ── Build output ──────────────────────────────────────────────────────────────
+# Résultat de "npm run build". Vite génère du code optimisé + hash de contenu.
+# On ne le versionne pas : Vercel le recrée à chaque déploiement.
 dist/
 dist-ssr/
 
-# ── Vite / misc dev ───────────────────────────────────────
-*.local
+# Cache interne de Vite (pré-bundling ESM). Recréé automatiquement au démarrage.
 .vite/
 
-# ── Environment variables (NEVER commit secrets) ──────────
+# ── Variables d'environnement ─────────────────────────────────────────────────
+# Ces fichiers peuvent contenir des clés API, tokens, mots de passe.
+# Un secret commité = un secret public. NE JAMAIS versionner.
 .env
 .env.local
 .env.*.local
+.env.production
 
-# ── Editors ───────────────────────────────────────────────
+# ── Fichiers locaux Vite ──────────────────────────────────────────────────────
+# Surcharges de config locales (proxy, ports…). Ne concernent qu'un dev.
+*.local
+
+# ── Éditeurs & IDE ────────────────────────────────────────────────────────────
+# VSCode : on garde extensions.json (recommandations partagées)
+# mais on ignore le reste (launch.json, settings.json = préférences perso).
 .vscode/*
 !.vscode/extensions.json
+
+# JetBrains (WebStorm, IntelliJ…)
 .idea/
+
+# Visual Studio
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# ── OS ────────────────────────────────────────────────────
+# ── Système d'exploitation ────────────────────────────────────────────────────
+# macOS : métadonnées Finder créées dans chaque dossier ouvert.
 .DS_Store
+# Windows : miniatures et métadonnées Explorateur.
 Thumbs.db
+desktop.ini
 
-# ── Logs ──────────────────────────────────────────────────
+# ── Logs ──────────────────────────────────────────────────────────────────────
+# Fichiers de debug générés par npm/yarn/pnpm en cas d'erreur d'installation.
 logs/
 *.log
 npm-debug.log*
@@ -38,5 +61,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# ── Claude Code (keep project settings, ignore local) ─────
+# ── Tests & couverture ────────────────────────────────────────────────────────
+# Rapports de couverture (Vitest / Jest). Volumineux et régénérables.
+coverage/
+.nyc_output/
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+# settings.json = config partageable (MCP, permissions projet) → versionné.
+# settings.local.json = surcharges personnelles → ignoré.
 .claude/settings.local.json
