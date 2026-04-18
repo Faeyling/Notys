@@ -6,14 +6,13 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NoteDB, FolderDB, sortItems } from '@/lib/db';
-import { PALETTE, DEFAULT_COLOR, PAGE_WAVE_COLORS } from '@/lib/constants';
+import { PAGE_WAVE_COLORS } from '@/lib/constants';
 import DotGrid from '@/components/DotGrid';
 import TripleWave from '@/components/TripleWave';
 import GridCard from '@/components/GridCard';
 import CreateModal from '@/components/CreateModal';
 import NoteDetail from '@/components/NoteDetail';
 import FolderLayer from '@/components/FolderLayer';
-import MoveModal from '@/components/MoveModal';
 import ColorChangeModal from '@/components/ColorChangeModal';
 import HelpModal from '@/components/HelpModal';
 import SortMenu from '@/components/SortMenu';
@@ -34,7 +33,7 @@ function shouldShowBackupReminder() {
 }
 
 /* ── Empty-state mascots ──────────────────────────────── */
-function EmptyState({ tab, hasQuery, animated }) {
+function EmptyState({ tab, hasQuery, animated, dark }) {
   const states = {
     home:   { variant: 'spa',     title: 'Le carnet est tout propre !',    sub: 'Noty attend ta première idée pour la colorier.' },
     fav:    { variant: 'float',   title: 'Rien à l\'horizon.',             sub: 'Mets une ⭐ sur tes notes les plus importantes pour les voir flotter ici.' },
@@ -48,7 +47,7 @@ function EmptyState({ tab, hasQuery, animated }) {
       className="flex flex-col items-center justify-center py-14 gap-4"
     >
       <Mascot variant={s.variant} size={110} animate={animated} />
-      <p className="font-bold text-base text-center" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>{s.title}</p>
+      <p className="font-bold text-base text-center" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>{s.title}</p>
       <p className="text-sm text-center max-w-xs" style={{ fontFamily: 'Quicksand, sans-serif', color: '#9CA3AF' }}>{s.sub}</p>
     </motion.div>
   );
@@ -140,7 +139,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
   const [createType, setCreateType]       = useState('note');
   const [openNote, setOpenNote]           = useState(null);
   const [openFolder, setOpenFolder]       = useState(null);
-  const [moveTarget, setMoveTarget]       = useState(null);
   const [colorTarget, setColorTarget]     = useState(null);
   const [voiceTarget, setVoiceTarget]     = useState(null);
   const [showHelp, setShowHelp]           = useState(false);
@@ -404,7 +402,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
             <div className="flex flex-col leading-none">
               <h1
                 className="text-2xl leading-none select-none"
-                style={{ fontFamily: '"Cherry Bomb One", cursive', color: '#111827' }}
+                style={{ fontFamily: '"Cherry Bomb One", cursive', color: dark ? '#f0f0f0' : '#111827' }}
               >
                 Noty's
               </h1>
@@ -476,7 +474,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                 <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Notes &amp; Dossiers</p>
               </div>
               {homeItems.length === 0
-                ? <EmptyState tab="home" animated={animated} />
+                ? <EmptyState tab="home" animated={animated} dark={dark} />
                 : <ItemGrid
                     items={homeItems}
                     folders={foldersWithCount}
@@ -501,7 +499,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                 <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Favoris</p>
               </div>
               {favNotes.length === 0
-                ? <EmptyState tab="fav" animated={animated} />
+                ? <EmptyState tab="fav" animated={animated} dark={dark} />
                 : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                     {favNotes.map(n => (
                       <GridCard
@@ -541,9 +539,9 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                 </div>
               </div>
               {searchQ && searchResults.length === 0
-                ? <EmptyState tab="search" hasQuery animated={animated} />
+                ? <EmptyState tab="search" hasQuery animated={animated} dark={dark} />
                 : !searchQ
-                  ? <EmptyState tab="search" animated={animated} />
+                  ? <EmptyState tab="search" animated={animated} dark={dark} />
                   : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                       {searchResults.map(item => (
                         <GridCard
@@ -703,14 +701,6 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
         parentFolderId={openFolder?.id || null}
         defaultColor={openFolder?.color || null}
         defaultType={createType}   /* pre-selects the correct tab */
-      />
-
-      <MoveModal
-        show={!!moveTarget}
-        item={moveTarget}
-        folders={folders}
-        onClose={() => setMoveTarget(null)}
-        onMove={(item, folder) => { handleMove(item, folder); setMoveTarget(null); }}
       />
 
       {/* ColorChangeModal — opened when onColorChange(item) is called from a GridCard */}
