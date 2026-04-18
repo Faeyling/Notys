@@ -20,7 +20,6 @@ import SortMenu from '@/components/SortMenu';
 import BackupReminderModal from '@/components/BackupReminderModal';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import Mascot from '@/components/Mascot';
-import useDarkMode from '@/hooks/useDarkMode';
 import useOrientation from '@/hooks/useOrientation';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -35,7 +34,7 @@ function shouldShowBackupReminder() {
 }
 
 /* ── Empty-state mascots ──────────────────────────────── */
-function EmptyState({ tab, hasQuery }) {
+function EmptyState({ tab, hasQuery, animated }) {
   const states = {
     home:   { variant: 'spa',     title: 'Le carnet est tout propre !',    sub: 'Noty attend ta première idée pour la colorier.' },
     fav:    { variant: 'float',   title: 'Rien à l\'horizon.',             sub: 'Mets une ⭐ sur tes notes les plus importantes pour les voir flotter ici.' },
@@ -48,7 +47,7 @@ function EmptyState({ tab, hasQuery }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-14 gap-4"
     >
-      <Mascot variant={s.variant} size={110} />
+      <Mascot variant={s.variant} size={110} animate={animated} />
       <p className="font-bold text-base text-center" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>{s.title}</p>
       <p className="text-sm text-center max-w-xs" style={{ fontFamily: 'Quicksand, sans-serif', color: '#9CA3AF' }}>{s.sub}</p>
     </motion.div>
@@ -128,8 +127,7 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
 }
 
 /* ── Main App ─────────────────────────────────────────── */
-export default function Home({ onGoBackup }) {
-  const [dark, setDark] = useDarkMode();
+export default function Home({ onGoBackup, dark, setDark, animated }) {
   const landscape = useOrientation();
 
   const [tab, setTab]           = useState('home');
@@ -383,15 +381,17 @@ export default function Home({ onGoBackup }) {
         >
           {/* Top bar */}
           <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-1 relative z-10">
-            {/* Title + inline mascot */}
-            <div className="flex items-center gap-2">
+            {/* Title + mascot below (mascot is static, hidden when header compacts) */}
+            <div className="flex flex-col leading-none">
               <h1
                 className="text-2xl leading-none select-none"
                 style={{ fontFamily: '"Cherry Bomb One", cursive', color: '#111827' }}
               >
                 Noty's
               </h1>
-              <Mascot variant="spa" size={38} animate={!scrolled} />
+              {!scrolled && (
+                <Mascot variant="spa" size={36} animate={false} />
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export default function Home({ onGoBackup }) {
             )}
           </AnimatePresence>
 
-          <TripleWave color={dark ? '#1a1a2e' : '#FFFBFE'} scrolled={scrolled} wiggle={wiggle} />
+          <TripleWave color={dark ? '#1a1a2e' : '#FFFBFE'} scrolled={scrolled} wiggle={animated && wiggle} />
         </div>
       )}
 
@@ -452,7 +452,7 @@ export default function Home({ onGoBackup }) {
           {tab === 'home' && (
             <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
               {homeItems.length === 0
-                ? <EmptyState tab="home" />
+                ? <EmptyState tab="home" animated={animated} />
                 : <ItemGrid
                     items={homeItems}
                     folders={foldersWithCount}
@@ -474,11 +474,11 @@ export default function Home({ onGoBackup }) {
           {tab === 'fav' && (
             <motion.div key="fav" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
               <div className="flex items-center gap-2 mb-4">
-                <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} />
+                <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} animate={animated} />
                 <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Favoris</p>
               </div>
               {favNotes.length === 0
-                ? <EmptyState tab="fav" />
+                ? <EmptyState tab="fav" animated={animated} />
                 : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                     {favNotes.map(n => (
                       <GridCard
@@ -500,7 +500,7 @@ export default function Home({ onGoBackup }) {
           {tab === 'search' && (
             <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <Mascot variant="snorkel" size={42} animate={false} />
+                <Mascot variant="snorkel" size={42} animate={animated} />
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#9CA3AF' }} />
                   <input
@@ -519,9 +519,9 @@ export default function Home({ onGoBackup }) {
                 </div>
               </div>
               {searchQ && searchResults.length === 0
-                ? <EmptyState tab="search" hasQuery />
+                ? <EmptyState tab="search" hasQuery animated={animated} />
                 : !searchQ
-                  ? <EmptyState tab="search" />
+                  ? <EmptyState tab="search" animated={animated} />
                   : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                       {searchResults.map(n => (
                         <GridCard
@@ -543,7 +543,7 @@ export default function Home({ onGoBackup }) {
           {tab === 'backup' && (
             <motion.div key="backup-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-4">
-              <Mascot variant="backpack" size={110} />
+              <Mascot variant="backpack" size={110} animate={animated} />
               <p className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
                 Sauvegarde
               </p>

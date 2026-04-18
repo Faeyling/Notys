@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Download, Upload, AlertTriangle, CheckCircle, Trash2, Shield } from 'lucide-react';
+import { ChevronLeft, Download, Upload, AlertTriangle, CheckCircle, Trash2, Shield, Sparkles } from 'lucide-react';
 import { NoteDB, FolderDB, db } from '@/lib/db';
 import TripleWave from '@/components/TripleWave';
 import Mascot from '@/components/Mascot';
@@ -9,15 +9,15 @@ import DotGrid from '@/components/DotGrid';
 const WAVE = '#ffadad';
 const FG   = '#7f1d1d';
 
-export default function Backup({ onBack, dark }) {
-  const [status, setStatus]               = useState(null);
-  const [message, setMessage]             = useState('');
+export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
+  const [status, setStatus]                     = useState(null);
+  const [message, setMessage]                   = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  /* ── Dark-mode-aware colour helpers ── */
   const pageBg   = dark ? '#1a1a2e' : '#FFFBFE';
   const textBase = dark ? '#f0f0f0' : '#111827';
 
+  /* ── Export ── */
   const handleExport = async () => {
     setStatus('loading');
     const [notes, folders] = await Promise.all([NoteDB.list(), FolderDB.list()]);
@@ -33,6 +33,7 @@ export default function Backup({ onBack, dark }) {
     setMessage(`Noty a bien enregistré ton export ! (${notes.length} notes, ${folders.length} dossiers)`);
   };
 
+  /* ── Import ── */
   const handleImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -46,7 +47,7 @@ export default function Backup({ onBack, dark }) {
       for (const f of (data.folders || [])) { const { id, ...rest } = f; await db.folders.add(rest); }
       for (const n of (data.notes   || [])) { const { id, ...rest } = n; await db.notes.add(rest);   }
       setStatus('success');
-      setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés avec succès !`);
+      setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);
     } catch {
       setStatus('error');
       setMessage('Fichier invalide ou corrompu.');
@@ -54,6 +55,7 @@ export default function Backup({ onBack, dark }) {
     e.target.value = '';
   };
 
+  /* ── Clear ── */
   const handleClear = async () => {
     await db.notes.clear();
     await db.folders.clear();
@@ -90,12 +92,52 @@ export default function Backup({ onBack, dark }) {
 
         {/* Mascot */}
         <div className="flex justify-center mb-2">
-          <Mascot variant="backpack" size={100} />
+          <Mascot variant="backpack" size={100} animate={animated} />
         </div>
+
+        {/* ── Animations toggle ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}
+          className="rounded-3xl p-5 shadow-md"
+          style={{ background: dark ? '#2d2d4a' : '#dcc6f1' }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(59,7,100,0.12)' }}
+              >
+                <Sparkles size={18} style={{ color: dark ? '#dcc6f1' : '#3b0764' }} />
+              </div>
+              <div>
+                <p className="font-bold text-sm" style={{ color: dark ? '#dcc6f1' : '#3b0764' }}>
+                  Animations
+                </p>
+                <p className="text-xs opacity-75" style={{ color: dark ? '#dcc6f1' : '#3b0764' }}>
+                  Effets visuels et vagues animées
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle pill */}
+            <button
+              onClick={() => onToggleAnimations?.(!animated)}
+              aria-label={animated ? 'Désactiver les animations' : 'Activer les animations'}
+              className="relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none"
+              style={{ background: animated ? (dark ? '#dcc6f1' : '#3b0764') : (dark ? '#374151' : '#9CA3AF') }}
+            >
+              <motion.span
+                className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
+                animate={{ x: animated ? 24 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            </button>
+          </div>
+        </motion.div>
 
         {/* Export */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
           className="rounded-3xl p-5 shadow-md"
           style={{ background: '#b4daf3' }}
         >
@@ -104,8 +146,8 @@ export default function Backup({ onBack, dark }) {
               <Download size={18} style={{ color: '#1e3a5f' }} />
             </div>
             <div>
-              <p className="font-bold text-sm"   style={{ color: '#1e3a5f' }}>Exporter mes données</p>
-              <p className="text-xs opacity-70"  style={{ color: '#1e3a5f' }}>Fichier JSON à conserver en lieu sûr</p>
+              <p className="font-bold text-sm"  style={{ color: '#1e3a5f' }}>Exporter mes données</p>
+              <p className="text-xs opacity-70" style={{ color: '#1e3a5f' }}>Fichier JSON à conserver en lieu sûr</p>
             </div>
           </div>
           <motion.button
@@ -119,9 +161,9 @@ export default function Backup({ onBack, dark }) {
           </motion.button>
         </motion.div>
 
-        {/* Import — text colours adjusted for dark mode */}
+        {/* Import */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.10 }}
           className="rounded-3xl p-5 shadow-md"
           style={{ background: '#c9e7c3' }}
         >
@@ -130,8 +172,7 @@ export default function Backup({ onBack, dark }) {
               <Upload size={18} style={{ color: '#166534' }} />
             </div>
             <div>
-              {/* Always dark green — card has its own green bg so contrast is fine */}
-              <p className="font-bold text-sm" style={{ color: '#166534' }}>Importer des données</p>
+              <p className="font-bold text-sm"  style={{ color: '#166534' }}>Importer des données</p>
               <p className="text-xs opacity-80" style={{ color: '#166534' }}>Depuis un fichier exporté précédemment</p>
             </div>
           </div>
@@ -147,9 +188,9 @@ export default function Backup({ onBack, dark }) {
           </label>
         </motion.div>
 
-        {/* Warning — fully readable in both light and dark */}
+        {/* Warning */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
           className="rounded-3xl p-4 flex gap-3"
           style={{
             background: dark ? 'rgba(255,224,160,0.12)' : 'rgba(255,243,162,0.35)',
@@ -163,9 +204,9 @@ export default function Backup({ onBack, dark }) {
           </p>
         </motion.div>
 
-        {/* RGPD — fully readable in both light and dark */}
+        {/* RGPD */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
           className="rounded-3xl p-4 flex gap-3"
           style={{
             border: dark ? '1.5px dashed #ffadad' : '1.5px dashed #f0baaf',
@@ -178,8 +219,8 @@ export default function Backup({ onBack, dark }) {
               Confidentialité &amp; données
             </p>
             <p className="text-xs leading-relaxed" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
-              Tes notes sont stockées <strong>uniquement sur cet appareil</strong>, de manière locale et
-              sécurisée. Aucune donnée n'est envoyée vers un serveur. Code en accès libre.{' '}
+              Tes notes sont stockées <strong>uniquement sur cet appareil</strong>, localement et
+              en sécurité. Aucune donnée n'est envoyée vers un serveur. Code en accès libre.{' '}
               <span style={{ opacity: 0.65 }}>— Fäeyling</span>
             </p>
           </div>
@@ -187,7 +228,7 @@ export default function Backup({ onBack, dark }) {
 
         {/* Danger zone */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
           className="rounded-3xl p-5"
           style={{
             background: dark ? 'rgba(255,173,173,0.08)' : 'rgba(255,173,173,0.20)',
@@ -200,8 +241,8 @@ export default function Backup({ onBack, dark }) {
             <p className="font-bold text-sm" style={{ color: dark ? '#ffadad' : FG }}>Zone danger</p>
           </div>
           <p className="text-xs leading-relaxed mb-4" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
-            Je garde tes notes précieusement, mais si tu supprimes l'app sans export, elles s'envoleront
-            pour toujours. Sois prudent ! 🐾
+            Je garde tes notes précieusement, mais si tu supprimes l'app sans export,
+            elles s'envoleront pour toujours. Sois prudent ! 🐾
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -220,14 +261,18 @@ export default function Backup({ onBack, dark }) {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="rounded-2xl p-4 flex items-center gap-3"
               style={{
-                background: status === 'success' ? (dark ? 'rgba(201,231,195,0.15)' : '#c9e7c333') : (dark ? 'rgba(255,173,173,0.15)' : '#ffadad33'),
+                background: status === 'success'
+                  ? (dark ? 'rgba(201,231,195,0.15)' : '#c9e7c333')
+                  : (dark ? 'rgba(255,173,173,0.15)' : '#ffadad33'),
                 border: `1.5px solid ${status === 'success' ? '#c9e7c3' : '#ffadad'}`,
               }}
             >
               {status === 'success'
                 ? <CheckCircle size={16} style={{ color: dark ? '#c9e7c3' : '#166534', flexShrink: 0 }} />
-                : <AlertTriangle size={16} style={{ color: dark ? '#ffadad' : FG, flexShrink: 0 }} />}
-              <p className="text-xs font-semibold" style={{ color: status === 'success' ? (dark ? '#c9e7c3' : '#166534') : (dark ? '#ffadad' : FG) }}>
+                : <AlertTriangle size={16} style={{ color: dark ? '#ffadad' : FG,     flexShrink: 0 }} />}
+              <p className="text-xs font-semibold" style={{
+                color: status === 'success' ? (dark ? '#c9e7c3' : '#166534') : (dark ? '#ffadad' : FG),
+              }}>
                 {message}
               </p>
             </motion.div>
@@ -235,7 +280,7 @@ export default function Backup({ onBack, dark }) {
         </AnimatePresence>
       </div>
 
-      {/* Clear confirmation — dark-mode aware */}
+      {/* Clear confirmation */}
       <AnimatePresence>
         {showClearConfirm && (
           <motion.div
