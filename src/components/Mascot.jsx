@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
  * Shared capybara body.
  * IMPORTANT: the two CENTRAL legs are drawn BEFORE the body so they sit
  * behind it (lower z/paint-order). The two OUTER legs are drawn last so
- * they appear in front.
+ * they appear in front and are raised to be fully attached to the body.
  */
 function CapyBody({ x = 0, y = 0 }) {
   return (
@@ -33,9 +33,9 @@ function CapyBody({ x = 0, y = 0 }) {
       <ellipse cx="38" cy="38" rx="5" ry="3.5" fill="#c4956a" />
       <ellipse cx="82" cy="38" rx="5" ry="3.5" fill="#c4956a" />
 
-      {/* ── Outer legs — in front of the body ── */}
-      <rect x="30" y="98" width="14" height="18" rx="7" fill="#8a6e4f" />
-      <rect x="80" y="98" width="14" height="18" rx="7" fill="#8a6e4f" />
+      {/* ── Outer legs — raised so they emerge fully from the body ── */}
+      <rect x="30" y="90" width="14" height="20" rx="7" fill="#8a6e4f" />
+      <rect x="80" y="90" width="14" height="20" rx="7" fill="#8a6e4f" />
     </g>
   );
 }
@@ -57,7 +57,7 @@ function CapySpa() {
   );
 }
 
-/* ── float: among waves — heart eyes, NO sunglasses ── */
+/* ── float: among waves — large heart eyes ── */
 function CapyFloat() {
   return (
     <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
@@ -66,34 +66,35 @@ function CapyFloat() {
       <path d="M0,120 Q30,114 60,120 Q90,126 120,120 L120,140 L0,140 Z" fill="#ffe0a0" />
       <CapyBody y={0} />
 
-      {/* ── Heart eyes drawn ON TOP of CapyBody's round eyes ── */}
+      {/* ── Heart eyes — enlarged, drawn on top of CapyBody's round eyes ── */}
+
       {/* Left heart — main shape */}
       <path
-        d="M47,55 C37,48 37,40 47,44.5 C57,40 57,48 47,55 Z"
+        d="M47,58 C34,50 34,38 47,43.5 C60,38 60,50 47,58 Z"
         fill="#c0306a"
       />
       {/* Left heart — relief highlight */}
       <path
-        d="M46,51.5 C40.5,47 40.5,43.5 46,46 C51.5,43.5 51.5,47 46,51.5 Z"
+        d="M46,53 C39,47 39,42 46,45.5 C53,42 53,47 46,53 Z"
         fill="#e060a0"
         opacity="0.6"
       />
       {/* Left heart — shine */}
-      <circle cx="42" cy="44" r="1.4" fill="white" opacity="0.75" />
+      <circle cx="41" cy="43" r="2" fill="white" opacity="0.80" />
 
       {/* Right heart — main shape */}
       <path
-        d="M73,55 C63,48 63,40 73,44.5 C83,40 83,48 73,55 Z"
+        d="M73,58 C60,50 60,38 73,43.5 C86,38 86,50 73,58 Z"
         fill="#c0306a"
       />
       {/* Right heart — relief highlight */}
       <path
-        d="M72,51.5 C66.5,47 66.5,43.5 72,46 C77.5,43.5 77.5,47 72,51.5 Z"
+        d="M72,53 C65,47 65,42 72,45.5 C79,42 79,47 72,53 Z"
         fill="#e060a0"
         opacity="0.6"
       />
       {/* Right heart — shine */}
-      <circle cx="68" cy="44" r="1.4" fill="white" opacity="0.75" />
+      <circle cx="67" cy="43" r="2" fill="white" opacity="0.80" />
     </svg>
   );
 }

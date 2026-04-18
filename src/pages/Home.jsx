@@ -165,6 +165,13 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
   /* Sort persistence */
   useEffect(() => { localStorage.setItem('notys-sort', sortId); }, [sortId]);
 
+  /* Sync browser/OS status-bar color with the active tab wave color */
+  useEffect(() => {
+    const color = PAGE_WAVE_COLORS[tab] || PAGE_WAVE_COLORS.home;
+    const meta  = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
+  }, [tab]);
+
   /* Scroll handler */
   const onScroll = useCallback((e) => {
     const y = e.currentTarget.scrollTop;
@@ -174,10 +181,11 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
     wiggleTimer.current = setTimeout(() => setWiggle(false), 400);
   }, []);
 
-  /* Note count per folder */
+  /* Note count + sub-folder count per folder */
   const foldersWithCount = folders.map(f => ({
     ...f,
-    _noteCount: notes.filter(n => n.folder_id === f.id).length,
+    _noteCount:   notes.filter(n => n.folder_id === f.id).length,
+    _folderCount: folders.filter(sf => sf.parent_id === f.id).length,
     _type: 'folder',
   }));
 
@@ -377,10 +385,10 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
       {!landscape && (
         <div
           className="relative shrink-0 z-10"
-          style={{ background: waveColor, minHeight: scrolled ? 70 : 110, transition: 'min-height 0.3s ease' }}
+          style={{ background: waveColor, minHeight: scrolled ? 90 : 130, transition: 'min-height 0.3s ease' }}
         >
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-1 relative z-10">
+          <div className="flex items-center justify-between px-4 pt-safe pt-8 pb-1 relative z-10">
             {/* Title + mascot below (mascot is static, hidden when header compacts) */}
             <div className="flex flex-col leading-none">
               <h1
@@ -451,6 +459,11 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           {/* HOME */}
           {tab === 'home' && (
             <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
+              {/* Mini Noty + section label — mirrors the Favorites header */}
+              <div className="flex items-center gap-2 mb-4">
+                <Mascot variant="spa" size={50} animate={animated} />
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Notes &amp; Dossiers</p>
+              </div>
               {homeItems.length === 0
                 ? <EmptyState tab="home" animated={animated} />
                 : <ItemGrid

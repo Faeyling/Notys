@@ -1,45 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, Folder, Star, ArrowRight, Trash2, Palette, Play, Mic } from 'lucide-react';
+import { Folder, Star, Trash2, Palette, Play, Mic } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
-import useLongPress from '@/hooks/useLongPress';
 
 export default function GridCard({
   item, type, onOpen, onToggleStar, onDelete, onMove, onColorChange, isDragging, dark,
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const btnRef = useRef(null);
 
   /* Palette — in dark mode notes blend with the page background */
-  const pal = PALETTE.find(p => p.bg === item.color) || PALETTE[8];
+  const pal        = PALETTE.find(p => p.bg === item.color) || PALETTE[8];
   const isDarkNote = dark && type === 'note';
-  const cardBg    = isDarkNote ? '#1a1a2e' : pal.bg;
-  const titleColor = isDarkNote ? pal.bg   : pal.fg;
+  const cardBg     = isDarkNote ? '#1a1a2e' : pal.bg;
+  const titleColor = isDarkNote ? pal.bg    : pal.fg;
   const metaColor  = isDarkNote ? `${pal.bg}99` : `${pal.fg}99`;
   const cardBorder = isDarkNote ? `1px solid ${pal.bg}40` : 'none';
 
-  const lp = useLongPress(
-    () => openMenu(),
-    () => onOpen(item),
-    550,
-  );
-
-  const stopProp = fn => e => { e.stopPropagation(); fn(); };
-
-  /* Open menu: compute fixed position from button rect so it escapes any container clip */
-  const openMenu = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom + 6,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    setMenuOpen(true);
-  };
+  const stopProp = fn => e => { e.stopPropagation(); fn(e); };
 
   const handlePlayAudio = (e) => {
     e.stopPropagation();
@@ -48,77 +26,16 @@ export default function GridCard({
     audio.play();
   };
 
-  const handleDelete = () => {
-    setMenuOpen(false);
-    setShowDeleteConfirm(true);
-  };
-
   const confirmDelete = (e) => {
     e.stopPropagation();
     setShowDeleteConfirm(false);
     onDelete(item);
   };
 
-  /* The dropdown menu rendered into document.body via portal — never clipped */
-  const dropdownPortal = menuOpen && createPortal(
-    <>
-      {/* Invisible backdrop to close on outside click */}
-      <div
-        className="fixed inset-0"
-        style={{ zIndex: 9998 }}
-        onClick={e => { e.stopPropagation(); setMenuOpen(false); }}
-      />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: -6 }}
-        animate={{ opacity: 1, scale: 1,    y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: -6 }}
-        transition={{ duration: 0.13 }}
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          top: menuPos.top,
-          right: menuPos.right,
-          zIndex: 9999,
-          background: 'white',
-          minWidth: 155,
-          borderRadius: 16,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-          border: `1px solid ${pal.bg}`,
-          overflow: 'hidden',
-        }}
-      >
-        <button
-          onClick={stopProp(() => { setMenuOpen(false); onColorChange(item); })}
-          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold hover:bg-gray-50 transition-colors"
-          style={{ color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
-        >
-          <Palette size={13} /> Couleur
-        </button>
-        <div style={{ height: 1, background: '#F3F4F6' }} />
-        <button
-          onClick={stopProp(() => { setMenuOpen(false); onMove(item); })}
-          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold hover:bg-gray-50 transition-colors"
-          style={{ color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
-        >
-          <ArrowRight size={13} /> Déplacer
-        </button>
-        <div style={{ height: 1, background: '#F3F4F6' }} />
-        <button
-          onClick={stopProp(handleDelete)}
-          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold hover:bg-red-50 transition-colors"
-          style={{ color: '#dc2626', fontFamily: 'Quicksand, sans-serif' }}
-        >
-          <Trash2 size={13} /> Supprimer
-        </button>
-      </motion.div>
-    </>,
-    document.body,
-  );
-
   return (
     <>
       <motion.div
-        {...lp}
+        onClick={() => onOpen(item)}
         className="relative rounded-2xl cursor-pointer select-none"
         style={{
           background: cardBg,
@@ -141,6 +58,7 @@ export default function GridCard({
           className="flex items-start justify-between px-3 pt-3 shrink-0"
           style={{ minHeight: 52 }}
         >
+          {/* Icon + title */}
           <div className="flex items-start gap-1.5 flex-1 min-w-0 pr-1">
             {type === 'folder' && (
               <Folder size={12} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
@@ -156,24 +74,40 @@ export default function GridCard({
             </p>
           </div>
 
-          {/* Three-dot menu button — ref used to compute portal position */}
-          <button
-            ref={btnRef}
+          {/* Action icons: palette + delete
+              onMouseDown/onTouchStart stop propagation so DnD never fires from these */}
+          <div
+            className="flex items-center gap-1 shrink-0"
             onMouseDown={e => e.stopPropagation()}
             onTouchStart={e => e.stopPropagation()}
-            onClick={stopProp(openMenu)}
-            className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all hover:scale-110 active:scale-90 mt-0.5"
-            style={{ background: 'rgba(0,0,0,0.10)' }}
           >
-            <MoreVertical size={11} style={{ color: titleColor }} />
-          </button>
+            <button
+              onClick={stopProp(() => onColorChange(item))}
+              className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+              style={{ background: 'rgba(0,0,0,0.09)' }}
+              aria-label="Changer la couleur"
+            >
+              <Palette size={10} style={{ color: titleColor }} />
+            </button>
+            <button
+              onClick={stopProp(() => setShowDeleteConfirm(true))}
+              className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+              style={{ background: 'rgba(0,0,0,0.09)' }}
+              aria-label="Supprimer"
+            >
+              <Trash2 size={10} style={{ color: titleColor }} />
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-3 pb-2.5 flex-1 items-end">
+        <div className="flex items-end justify-between px-3 pb-2.5 flex-1">
           {type === 'folder' ? (
-            <span className="text-xs opacity-60" style={{ color: titleColor, fontFamily: 'Quicksand, sans-serif' }}>
+            <span className="text-xs opacity-60 leading-tight" style={{ color: titleColor, fontFamily: 'Quicksand, sans-serif' }}>
               {item._noteCount ?? 0} note{(item._noteCount ?? 0) !== 1 ? 's' : ''}
+              {(item._folderCount ?? 0) > 0 && (
+                <> · {item._folderCount} dossier{item._folderCount !== 1 ? 's' : ''}</>
+              )}
             </span>
           ) : (
             <span className="text-xs" style={{ color: metaColor, fontFamily: 'Quicksand, sans-serif', fontSize: 10 }}>
@@ -186,6 +120,8 @@ export default function GridCard({
             {type === 'note' && item.type === 'voice' && item.audio_data && (
               <button
                 onClick={handlePlayAudio}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
                 className="w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
                 style={{ background: 'rgba(0,0,0,0.12)' }}
               >
@@ -196,6 +132,8 @@ export default function GridCard({
             {type === 'note' && (
               <button
                 onClick={stopProp(() => onToggleStar(item))}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
                 className="transition-all hover:scale-110 active:scale-90"
               >
                 <Star
@@ -209,12 +147,9 @@ export default function GridCard({
         </div>
       </motion.div>
 
-      {/* Portal-rendered dropdown — absolute overlay, never clipped */}
-      <AnimatePresence>{dropdownPortal}</AnimatePresence>
-
-      {/* Delete confirmation */}
+      {/* Delete confirmation — portal so it's never clipped */}
       <AnimatePresence>
-        {showDeleteConfirm && (
+        {showDeleteConfirm && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -225,8 +160,8 @@ export default function GridCard({
           >
             <motion.div
               initial={{ scale: 0.88, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1,    opacity: 1 }}
+              exit={{ scale: 0.88,    opacity: 0 }}
               className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
@@ -253,7 +188,8 @@ export default function GridCard({
                 </button>
               </div>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body,
         )}
       </AnimatePresence>
     </>

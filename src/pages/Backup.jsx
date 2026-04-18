@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Download, Upload, AlertTriangle, CheckCircle, Trash2, Shield, Sparkles } from 'lucide-react';
 import { NoteDB, FolderDB, db } from '@/lib/db';
@@ -10,6 +10,14 @@ const WAVE = '#ffadad';
 const FG   = '#7f1d1d';
 
 export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
+  /* Set status-bar to the page wave color on mount, restore on unmount */
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const prev = meta?.getAttribute('content');
+    if (meta) meta.setAttribute('content', WAVE);
+    return () => { if (meta && prev) meta.setAttribute('content', prev); };
+  }, []);
+
   const [status, setStatus]                     = useState(null);
   const [message, setMessage]                   = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
