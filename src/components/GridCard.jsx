@@ -5,7 +5,7 @@ import { Folder, Star, Trash2, Palette, Play, Mic } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 
 export default function GridCard({
-  item, type, onOpen, onToggleStar, onDelete, onMove, onColorChange, isDragging, dark,
+  item, type, onOpen, onToggleStar, onDelete, onColorChange, isDragging, dark,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 

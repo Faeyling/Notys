@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ChevronLeft, Edit3, Star, ArrowRight, Palette, Eye, Copy, Trash2,
   Play, Pause, Check, Mic,

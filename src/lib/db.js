@@ -55,18 +55,6 @@ export const FolderDB = {
   async clear() { await db.folders.clear(); },
 };
 
-export const SettingsDB = {
-  async get(key) {
-    const row = await db.settings.where('key').equals(key).first();
-    return row ? row.value : null;
-  },
-  async set(key, value) {
-    const existing = await db.settings.where('key').equals(key).first();
-    if (existing) await db.settings.update(existing.id, { value });
-    else await db.settings.add({ key, value });
-  },
-};
-
 export function sortItems(items, sortId) {
   const arr = [...items];
   switch (sortId) {

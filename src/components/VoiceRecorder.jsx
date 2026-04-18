@@ -37,7 +37,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       setAudioUrl(null);
       setElapsed(0);
     }
-  }, [show]);
+  }, [show, note?.audio_data]);
 
   useEffect(() => {
     return () => {
