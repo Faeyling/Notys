@@ -23,9 +23,26 @@ export default function NoteDetail({
   const [showVoice, setShowVoice] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const audioRef    = useRef(null);
-  const saveTimer   = useRef(null);
+  const audioRef     = useRef(null);
+  const saveTimer    = useRef(null);
   const dragControls = useDragControls();
+
+  /* Refs so the unmount cleanup can read the latest values without stale closures */
+  const latestRef = useRef({ note: null, title: '', content: '' });
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+  useEffect(() => { latestRef.current.note    = note;    }, [note]);
+  useEffect(() => { latestRef.current.title   = title;   }, [title]);
+  useEffect(() => { latestRef.current.content = content; }, [content]);
+
+  /* Save on unmount (covers hardware back-button close) */
+  useEffect(() => {
+    return () => {
+      clearTimeout(saveTimer.current);
+      const { note: n, title: t, content: c } = latestRef.current;
+      if (n) onSaveRef.current?.(n, { title: t, content: c });
+    };
+  }, []);
 
   useEffect(() => {
     if (note) {

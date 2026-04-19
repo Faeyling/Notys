@@ -125,7 +125,7 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
 }
 
 /* ── Main App ─────────────────────────────────────────── */
-export default function Home({ onGoBackup, dark, setDark, animated }) {
+export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBack }) {
   const landscape = useOrientation();
 
   const [tab, setTab]           = useState('home');
@@ -150,6 +150,20 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
   const [scrolled, setScrolled] = useState(false);
   const [wiggle, setWiggle]     = useState(false);
   const wiggleTimer             = useRef(null);
+
+  /* ── Back-button handler (registered once via refs) ───── */
+  const openNoteRef   = useRef(null);
+  const openFolderRef = useRef(null);
+  useEffect(() => { openNoteRef.current   = openNote;   }, [openNote]);
+  useEffect(() => { openFolderRef.current = openFolder; }, [openFolder]);
+
+  useEffect(() => {
+    onRegisterBack?.(() => {
+      if (openNoteRef.current)   { setOpenNote(null);   return true; }
+      if (openFolderRef.current) { setOpenFolder(null); return true; }
+      return false;
+    });
+  }, []); /* mount only — refs stay current */
 
   /* Load data */
   useEffect(() => {
