@@ -1,36 +1,46 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Home, Star, Search, HardDrive, Plus, Folder, FileText, Mic, Save } from 'lucide-react';
+import { X, Home, Star, Search, HardDrive, Plus, SlidersHorizontal, Palette, Save } from 'lucide-react';
 
 const SECTIONS = [
   {
     icon: Home, color: '#FFC7EE', fg: '#831843',
     title: 'Accueil',
-    desc: 'Toutes tes notes et dossiers s\'affichent ici en grille colorée. Appuie longuement sur une carte pour accéder rapidement aux options.',
+    desc: 'Notes et dossiers en grille colorée. Appuie sur une carte pour l\'ouvrir. Glisse une note sur un dossier pour la déplacer dedans. Glisse entre les cartes pour les réordonner.',
+  },
+  {
+    icon: Palette, color: '#dcc6f1', fg: '#3b0764',
+    title: 'Actions sur les cartes',
+    desc: 'Chaque carte affiche deux icônes : 🎨 pour changer la couleur, 🗑 pour supprimer (une confirmation est demandée). Dans une note ouverte, tu as aussi ⭐ pour les favoris, ✏️ pour éditer et ➡️ pour déplacer.',
   },
   {
     icon: Star, color: '#FFE0A0', fg: '#713f12',
     title: 'Favoris',
-    desc: 'Retrouve ici toutes les notes marquées d\'une ⭐. Appuie sur l\'étoile d\'une note pour l\'ajouter ou la retirer.',
+    desc: 'Retrouve ici toutes les notes marquées d\'une ⭐. Ouvre une note et appuie sur l\'étoile pour l\'ajouter ou la retirer des favoris.',
   },
   {
     icon: Search, color: '#b4daf3', fg: '#1e3a5f',
     title: 'Recherche',
-    desc: 'Cherche dans tous les titres et contenus de tes notes en temps réel.',
+    desc: 'Cherche en temps réel dans les titres et contenus des notes, ainsi que dans les noms des dossiers.',
+  },
+  {
+    icon: SlidersHorizontal, color: '#c8e7e1', fg: '#134e4a',
+    title: 'Tri & ordre',
+    desc: 'Le bouton ⊟ dans l\'en-tête ouvre les options de tri : date, nom, couleur, ouverture récente… Après un glisser-déposer, l\'ordre "Manuel" s\'active automatiquement et est mémorisé.',
+  },
+  {
+    icon: Plus, color: '#c9e7c3', fg: '#166534',
+    title: 'Créer',
+    desc: 'Le bouton + propose trois options : Note texte, Dossier et Note vocale. Si tu es dans un dossier, la création s\'y fait directement et la couleur du dossier est héritée.',
   },
   {
     icon: HardDrive, color: '#ffadad', fg: '#7f1d1d',
     title: 'Sauvegarde',
-    desc: 'Exporte toutes tes données en JSON et importe-les sur un autre appareil. Pense à sauvegarder régulièrement !',
+    desc: 'Exporte toutes tes notes et dossiers en fichier JSON. Importe-le sur un autre appareil pour tout retrouver à l\'identique. Pense à exporter régulièrement !',
   },
   {
-    icon: Plus, color: '#c9e7c3', fg: '#166534',
-    title: 'Le bouton +',
-    desc: 'Crée une note, un dossier ou une note vocale. Les notes héritent automatiquement de la couleur du dossier parent.',
-  },
-  {
-    icon: Save, color: '#dcc6f1', fg: '#3b0764',
+    icon: Save, color: '#ffe0a0', fg: '#713f12',
     title: 'Sauvegarde automatique',
-    desc: 'Toutes tes modifications sont sauvegardées automatiquement en temps réel dans le stockage local de ton appareil. Tes données ne quittent jamais ton téléphone.',
+    desc: 'Chaque modification est enregistrée automatiquement dans le stockage local de l\'appareil (IndexedDB). Tes données ne quittent jamais ton téléphone.',
   },
 ];
 

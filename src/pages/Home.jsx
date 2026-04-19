@@ -393,64 +393,67 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           className="relative shrink-0 z-10"
           style={{ background: waveColor, minHeight: scrolled ? 90 : 130, transition: 'min-height 0.3s ease' }}
         >
-          {/* Top bar */}
+          {/* Top bar + sort bar in one block so sort flows naturally below title */}
           <div
-            className="flex items-center justify-between px-4 pb-8 relative z-10"
+            className="relative z-10 px-4 pb-8"
             style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}
           >
-            {/* Title + mascot below (mascot is static, hidden when header compacts) */}
-            <div className="flex flex-col leading-none">
-              <h1
-                className="text-2xl leading-none select-none"
-                style={{ fontFamily: '"Cherry Bomb One", cursive', color: dark ? '#f0f0f0' : '#111827' }}
-              >
-                Noty's
-              </h1>
-              {!scrolled && (
-                <Mascot variant="spa" size={36} animate={false} />
+            {/* Title row */}
+            <div className="flex items-center justify-between mb-1">
+              {/* Title + mascot below (mascot hidden when header compacts) */}
+              <div className="flex flex-col leading-none">
+                <h1
+                  className="text-2xl leading-none select-none"
+                  style={{ fontFamily: '"Cherry Bomb One", cursive', color: dark ? '#f0f0f0' : '#111827' }}
+                >
+                  Noty's
+                </h1>
+                {!scrolled && (
+                  <Mascot variant="spa" size={36} animate={false} />
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowSort(v => !v)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  style={{ background: 'rgba(0,0,0,0.08)' }}
+                >
+                  <SlidersHorizontal size={15} style={{ color: '#374151' }} />
+                </button>
+                <button
+                  onClick={() => setDark(v => !v)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  style={{ background: 'rgba(0,0,0,0.08)' }}
+                >
+                  {dark
+                    ? <Sun  size={15} style={{ color: '#374151' }} />
+                    : <Moon size={15} style={{ color: '#374151' }} />}
+                </button>
+                <button
+                  onClick={() => setShowHelp(true)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  style={{ background: 'rgba(0,0,0,0.08)' }}
+                >
+                  <HelpCircle size={15} style={{ color: '#374151' }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Sort bar — immediately below title row, inside the same padded block */}
+            <AnimatePresence>
+              {showSort && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-2"
+                >
+                  <SortMenu value={sortId} onChange={v => { setSortId(v); setShowSort(false); }} />
+                </motion.div>
               )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSort(v => !v)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
-                style={{ background: 'rgba(0,0,0,0.08)' }}
-              >
-                <SlidersHorizontal size={15} style={{ color: '#374151' }} />
-              </button>
-              <button
-                onClick={() => setDark(v => !v)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
-                style={{ background: 'rgba(0,0,0,0.08)' }}
-              >
-                {dark
-                  ? <Sun  size={15} style={{ color: '#374151' }} />
-                  : <Moon size={15} style={{ color: '#374151' }} />}
-              </button>
-              <button
-                onClick={() => setShowHelp(true)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
-                style={{ background: 'rgba(0,0,0,0.08)' }}
-              >
-                <HelpCircle size={15} style={{ color: '#374151' }} />
-              </button>
-            </div>
+            </AnimatePresence>
           </div>
-
-          {/* Sort bar */}
-          <AnimatePresence>
-            {showSort && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden px-4 pb-2 -mt-4"
-              >
-                <SortMenu value={sortId} onChange={v => { setSortId(v); setShowSort(false); }} />
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           <TripleWave color={dark ? '#1a1a2e' : '#FFFBFE'} scrolled={scrolled} wiggle={animated && wiggle} />
         </div>
