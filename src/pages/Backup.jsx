@@ -269,7 +269,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
             </p>
             <p className="text-xs leading-relaxed" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
               Tes notes sont stockées <strong>uniquement sur cet appareil</strong>, localement et
-              en sécurité. Aucune donnée n'est envoyée vers un serveur. Code en accès libre.{' '}
+              en sécurité. Aucune donnée n'est envoyée vers un serveur. Code en accès libre : https://github.com/Faeyling/Notys. Pour contacter la maman de Noty : faeyling@proton.me{' '}
               <span style={{ opacity: 0.65 }}>— Fäeyling</span>
             </p>
           </div>
