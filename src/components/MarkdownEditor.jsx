@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import DOMPurify from 'dompurify';
 
 const TOOLBAR = [
   { label: 'H1', insert: (t, s, e) => `# ${t.slice(s,e)||'Titre 1'}`, text: 'H1' },
@@ -57,7 +58,8 @@ export default function MarkdownEditor({ value, onChange, fg }) {
             onMouseDown={e => { e.preventDefault(); apply(tool); }}
             onTouchStart={e => { e.preventDefault(); apply(tool); }}
             title={tool.label}
-            className="px-2 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-70 active:scale-90 select-none min-w-[26px]"
+            aria-label={tool.label}
+            className="px-3 py-2 rounded-lg text-xs font-bold transition-all hover:opacity-70 active:scale-90 select-none min-w-[40px]"
             style={{
               color: fg,
               background: `${fg}18`,
@@ -72,7 +74,9 @@ export default function MarkdownEditor({ value, onChange, fg }) {
         ))}
       </div>
 
+      <label className="sr-only" htmlFor="markdown-editor-textarea">Contenu de la note</label>
       <textarea
+        id="markdown-editor-textarea"
         ref={taRef}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -132,5 +136,6 @@ export function renderMarkdown(text) {
     }
   }
   closeList();
-  return result.join('');
+  const raw = result.join('');
+  return DOMPurify.sanitize(raw, { ADD_TAGS: ['u'], ADD_ATTR: ['style'] });
 }

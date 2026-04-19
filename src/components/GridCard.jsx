@@ -106,6 +106,7 @@ export default function GridCard({
             ) : (
               <p
                 className="font-bold text-xs leading-tight line-clamp-3"
+                title={item.title || item.name || 'Sans titre'}
                 style={{ color: titleColor, fontFamily: '"Quicksand", sans-serif', fontWeight: 700 }}
               >
                 {item.title || item.name || 'Sans titre'}
@@ -171,7 +172,7 @@ export default function GridCard({
                 onClick={handlePlayAudio}
                 onMouseDown={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
-                className="w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
                 style={{ background: 'rgba(0,0,0,0.12)' }}
               >
                 <Play size={10} fill={titleColor} style={{ color: titleColor }} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mic, FileText, Folder } from 'lucide-react';
 import { PALETTE, DEFAULT_COLOR } from '@/lib/constants';
@@ -20,16 +20,32 @@ export default function CreateModal({
   const [color, setColor]     = useState(defaultColor || DEFAULT_COLOR);
   const [folderId, setFolderId] = useState(parentFolderId || '');
 
+  const modalRef  = useRef(null);
+  const titleRef  = useRef(null);
+
   useEffect(() => {
     if (show) {
       setTitle('');
       setContent('');
       setColor(defaultColor || DEFAULT_COLOR);
       setFolderId(parentFolderId || '');
-      /* Respect the requested default type every time the modal opens */
       setType(defaultType || 'note');
+      setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [show, parentFolderId, defaultColor, defaultType]);
+
+  const trapFocus = (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalRef.current?.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  };
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -57,14 +73,19 @@ export default function CreateModal({
         className="fixed inset-0 z-50 flex items-end justify-center"
         style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)' }}
         onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label={type === 'folder' ? 'Créer un dossier' : 'Créer une note'}
       >
         <motion.div
+          ref={modalRef}
           key="create-sheet"
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 26, stiffness: 300 }}
           onClick={e => e.stopPropagation()}
+          onKeyDown={trapFocus}
           className="w-full max-w-lg rounded-t-3xl p-6 pb-10 shadow-2xl"
           style={{ background: 'white' }}
         >
@@ -75,6 +96,7 @@ export default function CreateModal({
             </h2>
             <button
               onClick={onClose}
+              aria-label="Fermer"
               className="w-8 h-8 rounded-full flex items-center justify-center"
               style={{ background: '#F5F5F5' }}
             >
@@ -83,10 +105,12 @@ export default function CreateModal({
           </div>
 
           {/* Type tabs */}
-          <div className="flex rounded-2xl overflow-hidden mb-5 p-1 gap-1" style={{ background: '#F5F5F5' }}>
+          <div className="flex rounded-2xl overflow-hidden mb-5 p-1 gap-1" style={{ background: '#F5F5F5' }} role="tablist">
             {tabs.map(({ id, label, Icon }) => (
               <button
                 key={id}
+                role="tab"
+                aria-selected={type === id}
                 onClick={() => setType(id)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all duration-200"
                 style={{
@@ -95,18 +119,22 @@ export default function CreateModal({
                   fontFamily: 'Quicksand, sans-serif',
                 }}
               >
-                <Icon size={13} /> {label}
+                <Icon size={13} aria-hidden="true" /> {label}
               </button>
             ))}
           </div>
 
           <div className="space-y-3">
+            <label className="sr-only" htmlFor="create-title">
+              {type === 'folder' ? 'Nom du dossier' : 'Titre de la note'}
+            </label>
             <input
+              id="create-title"
+              ref={titleRef}
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSave()}
               placeholder={type === 'folder' ? 'Nom du dossier...' : 'Titre de la note...'}
-              autoFocus
               className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all"
               style={{
                 borderColor: pal.bg,
@@ -117,19 +145,23 @@ export default function CreateModal({
             />
 
             {type === 'note' && (
-              <textarea
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder="Contenu (Markdown supporté)..."
-                rows={3}
-                className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all resize-none"
-                style={{
-                  borderColor: pal.bg,
-                  background: `${pal.bg}22`,
-                  color: '#111827',
-                  fontFamily: 'Quicksand, sans-serif',
-                }}
-              />
+              <>
+                <label className="sr-only" htmlFor="create-content">Contenu de la note</label>
+                <textarea
+                  id="create-content"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  placeholder="Contenu (Markdown supporté)..."
+                  rows={3}
+                  className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all resize-none"
+                  style={{
+                    borderColor: pal.bg,
+                    background: `${pal.bg}22`,
+                    color: '#111827',
+                    fontFamily: 'Quicksand, sans-serif',
+                  }}
+                />
+              </>
             )}
 
             {type === 'voice' && (
@@ -137,7 +169,7 @@ export default function CreateModal({
                 className="rounded-2xl px-4 py-3 text-sm text-center border-2"
                 style={{ borderColor: pal.bg, background: `${pal.bg}22`, color: pal.fg }}
               >
-                <Mic size={20} className="mx-auto mb-1" />
+                <Mic size={20} className="mx-auto mb-1" aria-hidden="true" />
                 <p style={{ fontFamily: 'Quicksand, sans-serif', fontSize: 12 }}>
                   La note vocale sera enregistrée après création
                 </p>
@@ -145,20 +177,24 @@ export default function CreateModal({
             )}
 
             {type !== 'folder' && (
-              <select
-                value={folderId}
-                onChange={e => setFolderId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 appearance-none"
-                style={{
-                  borderColor: pal.bg,
-                  background: `${pal.bg}22`,
-                  color: folderId ? '#111827' : '#9CA3AF',
-                  fontFamily: 'Quicksand, sans-serif',
-                }}
-              >
-                <option value="">Aucun dossier</option>
-                {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
+              <>
+                <label className="sr-only" htmlFor="create-folder-select">Dossier</label>
+                <select
+                  id="create-folder-select"
+                  value={folderId}
+                  onChange={e => setFolderId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 appearance-none"
+                  style={{
+                    borderColor: pal.bg,
+                    background: `${pal.bg}22`,
+                    color: folderId ? '#111827' : '#9CA3AF',
+                    fontFamily: 'Quicksand, sans-serif',
+                  }}
+                >
+                  <option value="">Aucun dossier</option>
+                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+              </>
             )}
 
             <div>

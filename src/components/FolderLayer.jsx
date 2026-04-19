@@ -10,7 +10,7 @@ import TripleWave from './TripleWave';
 function EmptyFolder({ dark }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <Mascot variant="spa" size={90} />
+      <Mascot variant="spa" size={90} aria-hidden="true" />
       <p className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
         Dossier vide
       </p>
@@ -58,15 +58,19 @@ export default function FolderLayer({
           style={{ background: folder.color, minHeight: 100, touchAction: 'none' }}
           onPointerDown={e => dragControls.start(e)}
         >
+          {/* Drag handle pill */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full" style={{ background: `${pal.fg}40` }} aria-hidden="true" />
+
           <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
             <button
               onClick={onClose}
+              aria-label="Retour"
               className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-90"
               style={{ background: 'rgba(0,0,0,0.12)' }}
             >
               <ChevronLeft size={18} style={{ color: pal.fg }} />
             </button>
-            <Folder size={18} style={{ color: pal.fg, opacity: 0.8 }} />
+            <Folder size={18} style={{ color: pal.fg, opacity: 0.8 }} aria-hidden="true" />
             <h2
               className="font-bold text-lg truncate"
               style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif', fontWeight: 700 }}

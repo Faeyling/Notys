@@ -430,7 +430,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                   Noty's
                 </h1>
                 {!scrolled && (
-                  <Mascot variant="spa" size={36} animate={false} />
+                  <Mascot variant="spa" size={36} animate={false} aria-hidden="true" />
                 )}
               </div>
 
@@ -494,7 +494,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
               {/* Mini Noty + section label — mirrors the Favorites header */}
               <div className="flex items-center gap-2 mb-4">
-                <Mascot variant="spa" size={50} animate={animated} />
+                <Mascot variant="spa" size={50} animate={animated} aria-hidden="true" />
                 <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Notes &amp; Dossiers</p>
               </div>
               {homeItems.length === 0
@@ -519,7 +519,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           {tab === 'fav' && (
             <motion.div key="fav" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
               <div className="flex items-center gap-2 mb-4">
-                <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} animate={animated} />
+                <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} animate={animated} aria-hidden="true" />
                 <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Favoris</p>
               </div>
               {favNotes.length === 0
@@ -544,13 +544,14 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           {tab === 'search' && (
             <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <Mascot variant="snorkel" size={42} animate={animated} />
+                <Mascot variant="snorkel" size={42} animate={animated} aria-hidden="true" />
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#9CA3AF' }} />
                   <input
                     value={searchQ}
                     onChange={e => setSearchQ(e.target.value)}
                     placeholder="Rechercher..."
+                    aria-label="Rechercher tes notes"
                     autoFocus
                     className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm outline-none border-2"
                     style={{

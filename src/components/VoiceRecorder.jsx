@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Play, Pause, Check, X } from 'lucide-react';
+import { Mic, Square, Play, Pause, Check, X, AlertTriangle } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
+
+const MAX_DURATION_S = 300;   // 5 minutes
+const MAX_BASE64_MB  = 10;    // 10 MB max for stored audio
 
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
@@ -18,13 +21,15 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   const [playing, setPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState(note?.audio_data || null);
   const [bars, setBars] = useState(Array(24).fill(4));
+  const [error, setError] = useState(null);
 
-  const recorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const audioRef = useRef(null);
-  const analyserRef = useRef(null);
-  const animFrameRef = useRef(null);
+  const recorderRef   = useRef(null);
+  const chunksRef     = useRef([]);
+  const timerRef      = useRef(null);
+  const audioRef      = useRef(null);
+  const analyserRef   = useRef(null);
+  const animFrameRef  = useRef(null);
+  const modalRef      = useRef(null);
 
   const pal = PALETTE.find(p => p.bg === color) || PALETTE[8];
 
@@ -36,8 +41,16 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       setPhase('idle');
       setAudioUrl(null);
       setElapsed(0);
+      setError(null);
     }
   }, [show, note?.audio_data]);
+
+  /* Focus trap */
+  useEffect(() => {
+    if (show) {
+      setTimeout(() => modalRef.current?.focus(), 50);
+    }
+  }, [show]);
 
   useEffect(() => {
     return () => {
@@ -48,6 +61,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   }, []);
 
   const startRecording = async () => {
+    setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -80,6 +94,13 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const url = await blobToBase64(blob);
+        /* Size guard: base64 is ~4/3 of binary size */
+        const sizeMB = url.length * 0.75 / 1_048_576;
+        if (sizeMB > MAX_BASE64_MB) {
+          setError(`Enregistrement trop volumineux (${sizeMB.toFixed(1)} Mo). Maximum : ${MAX_BASE64_MB} Mo.`);
+          setPhase('idle');
+          return;
+        }
         setAudioUrl(url);
         setPhase('preview');
       };
@@ -87,9 +108,18 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       recorder.start(100);
       setPhase('recording');
       setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+      timerRef.current = setInterval(() => {
+        setElapsed(e => {
+          if (e + 1 >= MAX_DURATION_S) {
+            /* Auto-stop at limit */
+            clearInterval(timerRef.current);
+            recorderRef.current?.stop();
+          }
+          return e + 1;
+        });
+      }, 1000);
     } catch {
-      alert("Microphone inaccessible. Vérifie les permissions.");
+      setError("Microphone inaccessible. Vérifie les permissions de l'app.");
     }
   };
 
@@ -113,6 +143,19 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
   const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+  const trapFocus = (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalRef.current?.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  };
+
   if (!show) return null;
 
   return (
@@ -124,22 +167,36 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         className="fixed inset-0 z-50 flex items-center justify-center px-6"
         style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
         onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Enregistrement vocal"
       >
         <motion.div
+          ref={modalRef}
+          tabIndex={-1}
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.85, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 320, damping: 22 }}
           onClick={e => e.stopPropagation()}
-          className="w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center"
+          onKeyDown={trapFocus}
+          className="w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center outline-none"
           style={{ background: pal.bg }}
         >
           <p className="font-bold text-base mb-4" style={{ color: pal.fg, fontFamily: '"Cherry Bomb One", cursive' }}>
             {phase === 'recording' ? 'Enregistrement…' : phase === 'preview' ? 'Écouter' : 'Note vocale'}
           </p>
 
+          {/* Error message */}
+          {error && (
+            <div className="flex items-start gap-2 mb-4 rounded-2xl px-3 py-2 text-left" style={{ background: 'rgba(0,0,0,0.15)' }}>
+              <AlertTriangle size={14} style={{ color: pal.fg, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+              <p className="text-xs font-semibold leading-snug" style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}>{error}</p>
+            </div>
+          )}
+
           {/* Waveform visualizer */}
-          <div className="flex items-center justify-center gap-0.5 h-12 mb-4">
+          <div className="flex items-center justify-center gap-0.5 h-12 mb-4" aria-hidden="true">
             {bars.map((h, i) => (
               <motion.div
                 key={i}
@@ -152,18 +209,38 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           </div>
 
           {/* Timer */}
-          <p className="text-2xl font-bold mb-6" style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}>
+          <p
+            className="text-2xl font-bold mb-6"
+            style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
+            aria-live="polite"
+            aria-label={`Durée : ${fmt(elapsed)}`}
+          >
             {fmt(elapsed)}
+            {phase === 'recording' && (
+              <span className="text-xs ml-2 opacity-60" style={{ fontFamily: 'Quicksand, sans-serif' }}>
+                / {fmt(MAX_DURATION_S)}
+              </span>
+            )}
           </p>
 
           {/* Controls */}
           <div className="flex items-center justify-center gap-4">
-            <button onClick={onClose} className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.12)' }}>
+            <button
+              onClick={onClose}
+              aria-label="Fermer l'enregistreur"
+              className="w-11 h-11 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.12)' }}
+            >
               <X size={18} style={{ color: pal.fg }} />
             </button>
 
             {phase === 'idle' && (
-              <button onClick={startRecording} className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: pal.fg }}>
+              <button
+                onClick={startRecording}
+                aria-label="Démarrer l'enregistrement"
+                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
+                style={{ background: pal.fg }}
+              >
                 <Mic size={24} style={{ color: pal.bg }} />
               </button>
             )}
@@ -172,6 +249,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
                 onClick={stopRecording}
                 animate={{ scale: [1, 1.06, 1] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
+                aria-label="Arrêter l'enregistrement"
                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
                 style={{ background: '#dc2626' }}
               >
@@ -179,7 +257,12 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
               </motion.button>
             )}
             {phase === 'preview' && (
-              <button onClick={togglePlay} className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: pal.fg }}>
+              <button
+                onClick={togglePlay}
+                aria-label={playing ? 'Mettre en pause' : 'Écouter l\'enregistrement'}
+                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
+                style={{ background: pal.fg }}
+              >
                 {playing
                   ? <Pause size={22} style={{ color: pal.bg }} />
                   : <Play size={22} fill={pal.bg} style={{ color: pal.bg }} />
@@ -188,7 +271,12 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
             )}
 
             {phase === 'preview' && audioUrl && (
-              <button onClick={() => { onSave(audioUrl); onClose(); }} className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.12)' }}>
+              <button
+                onClick={() => { onSave(audioUrl); onClose(); }}
+                aria-label="Sauvegarder l'enregistrement"
+                className="w-11 h-11 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(0,0,0,0.12)' }}
+              >
                 <Check size={18} style={{ color: pal.fg }} />
               </button>
             )}
@@ -196,7 +284,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
           {phase === 'preview' && (
             <button
-              onClick={() => { setPhase('idle'); setAudioUrl(null); setElapsed(0); }}
+              onClick={() => { setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null); }}
               className="mt-4 text-xs font-semibold"
               style={{ color: `${pal.fg}80`, fontFamily: 'Quicksand, sans-serif' }}
             >

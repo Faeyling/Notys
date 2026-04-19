@@ -7,6 +7,7 @@ export default function SortMenu({ value, onChange }) {
         <button
           key={opt.id}
           onClick={() => onChange(opt.id)}
+          aria-pressed={value === opt.id}
           className="flex items-center gap-1 px-3 py-1.5 rounded-full shrink-0 transition-all text-xs font-semibold"
           style={{
             background: value === opt.id ? '#111827' : '#F3F4F6',

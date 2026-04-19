@@ -25,6 +25,7 @@ export default function NoteDetail({
   const [showVoice, setShowVoice] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [copied, setCopied] = useState(false);
   const audioRef     = useRef(null);
   const saveTimer    = useRef(null);
   const dragControls = useDragControls();
@@ -68,7 +69,10 @@ export default function NoteDetail({
   const handleContentChange = (v) => { setContent(v); autoSave(title, v); };
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(`${title}\n\n${content}`).catch(() => {});
+    navigator.clipboard?.writeText(`${title}\n\n${content}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
   };
 
   const togglePlay = () => {
@@ -93,9 +97,11 @@ export default function NoteDetail({
   const pageBg = dark ? '#1a1a2e' : '#FAFAFA';
   const textFg = dark ? '#f0f0f0' : '#374151';
 
-  const IconBtn = ({ onClick, children, active }) => (
+  const IconBtn = ({ onClick, children, active, ariaLabel }) => (
     <button
       onClick={onClick}
+      aria-label={ariaLabel}
+      aria-pressed={active ?? undefined}
       className="w-9 h-9 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-90 shrink-0"
       style={{ background: active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.10)' }}
     >
@@ -126,44 +132,56 @@ export default function NoteDetail({
           style={{ background: note.color, minHeight: 110, touchAction: 'none' }}
           onPointerDown={e => dragControls.start(e)}
         >
+          {/* Drag handle pill */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full" style={{ background: `${pal.fg}40` }} aria-hidden="true" />
+
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-1 relative z-10 gap-1">
-            <IconBtn onClick={() => { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); }}>
+          <div
+            className="flex items-center justify-between px-4 pb-1 relative z-10 gap-1"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+          >
+            <IconBtn
+              onClick={() => { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); }}
+              ariaLabel="Retour"
+            >
               <ChevronLeft size={18} style={{ color: pal.fg }} />
             </IconBtn>
 
             <div className="flex items-center gap-1 flex-wrap justify-end">
-              <IconBtn onClick={() => setEditing(v => !v)} active={editing}>
+              <IconBtn onClick={() => setEditing(v => !v)} active={editing} ariaLabel={editing ? 'Quitter l\'édition' : 'Modifier la note'}>
                 <Edit3 size={15} style={{ color: pal.fg }} />
               </IconBtn>
-              <IconBtn onClick={() => onToggleStar(note)}>
+              <IconBtn onClick={() => onToggleStar(note)} ariaLabel={note.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
                 <Star size={15} fill={note.is_favorite ? pal.fg : 'none'} style={{ color: pal.fg }} />
               </IconBtn>
-              <IconBtn onClick={() => setShowMove(true)}>
+              <IconBtn onClick={() => setShowMove(true)} ariaLabel="Déplacer la note">
                 <ArrowRight size={15} style={{ color: pal.fg }} />
               </IconBtn>
-              <IconBtn onClick={() => setShowColorPicker(v => !v)} active={showColorPicker}>
+              <IconBtn onClick={() => setShowColorPicker(v => !v)} active={showColorPicker} ariaLabel="Changer la couleur">
                 <Palette size={15} style={{ color: pal.fg }} />
               </IconBtn>
               {editing && (
-                <IconBtn onClick={() => setShowPreview(v => !v)} active={showPreview}>
+                <IconBtn onClick={() => setShowPreview(v => !v)} active={showPreview} ariaLabel={showPreview ? 'Masquer la prévisualisation' : 'Prévisualiser'}>
                   <Eye size={15} style={{ color: pal.fg }} />
                 </IconBtn>
               )}
-              <IconBtn onClick={handleCopy}>
-                <Copy size={15} style={{ color: pal.fg }} />
+              <IconBtn onClick={handleCopy} ariaLabel="Copier la note">
+                {copied
+                  ? <Check size={15} style={{ color: pal.fg }} />
+                  : <Copy size={15} style={{ color: pal.fg }} />
+                }
               </IconBtn>
               {note.type === 'voice' && (
-                <IconBtn onClick={togglePlay} active={playing}>
+                <IconBtn onClick={togglePlay} active={playing} ariaLabel={playing ? 'Mettre en pause' : 'Écouter la note vocale'}>
                   {playing ? <Pause size={15} style={{ color: pal.fg }} /> : <Play size={15} style={{ color: pal.fg }} />}
                 </IconBtn>
               )}
               {note.type === 'voice' && (
-                <IconBtn onClick={() => setShowVoice(true)}>
+                <IconBtn onClick={() => setShowVoice(true)} ariaLabel="Ré-enregistrer la note vocale">
                   <Mic size={15} style={{ color: pal.fg }} />
                 </IconBtn>
               )}
-              <IconBtn onClick={() => setShowDeleteConfirm(true)}>
+              <IconBtn onClick={() => setShowDeleteConfirm(true)} ariaLabel="Supprimer la note">
                 <Trash2 size={15} style={{ color: pal.fg }} />
               </IconBtn>
             </div>
@@ -172,12 +190,16 @@ export default function NoteDetail({
           {/* Title */}
           <div className="px-5 pb-9 pt-1 relative z-10">
             {editing ? (
-              <input
-                value={title}
-                onChange={e => handleTitleChange(e.target.value)}
-                className="w-full bg-transparent outline-none border-b text-lg font-bold"
-                style={{ color: pal.fg, borderColor: `${pal.fg}40`, fontFamily: 'Quicksand, sans-serif', fontWeight: 700 }}
-              />
+              <>
+                <label className="sr-only" htmlFor="note-title-input">Titre de la note</label>
+                <input
+                  id="note-title-input"
+                  value={title}
+                  onChange={e => handleTitleChange(e.target.value)}
+                  className="w-full bg-transparent outline-none border-b text-lg font-bold"
+                  style={{ color: pal.fg, borderColor: `${pal.fg}40`, fontFamily: 'Quicksand, sans-serif', fontWeight: 700 }}
+                />
+              </>
             ) : (
               <h2 className="text-lg font-bold leading-snug" style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif', fontWeight: 700 }}>
                 {note.title || 'Sans titre'}
@@ -223,7 +245,7 @@ export default function NoteDetail({
               showPreview ? (
                 <div
                   className="text-sm leading-relaxed"
-                  style={{ color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
+                  style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                 />
               ) : (
@@ -272,6 +294,9 @@ export default function NoteDetail({
               exit={{ opacity: 0 }}
               className="absolute inset-0 z-50 flex items-center justify-center px-6"
               style={{ background: 'rgba(0,0,0,0.4)' }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirmer la suppression"
             >
               <motion.div
                 initial={{ scale: 0.88 }}

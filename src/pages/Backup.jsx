@@ -49,7 +49,12 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data.notes) throw new Error('Format invalide');
+      /* Schema validation */
+      if (!data || typeof data !== 'object') throw new Error('Format invalide : fichier JSON attendu.');
+      if (!Array.isArray(data.notes)) throw new Error('Format invalide : tableau "notes" manquant.');
+      if (data.version !== undefined && typeof data.version !== 'number') throw new Error('Format invalide : champ "version" incorrect.');
+      if (data.folders !== undefined && !Array.isArray(data.folders)) throw new Error('Format invalide : tableau "folders" incorrect.');
+      if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
       await db.notes.clear();
       await db.folders.clear();
 
@@ -225,15 +230,25 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
               <p className="text-xs opacity-80" style={{ color: '#166534' }}>Depuis un fichier exporté précédemment</p>
             </div>
           </div>
-          <label className="block w-full cursor-pointer">
+          <label
+            className="block w-full"
+            style={{ cursor: status === 'loading' ? 'not-allowed' : 'pointer', opacity: status === 'loading' ? 0.6 : 1 }}
+          >
             <motion.span
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: status === 'loading' ? 1 : 1.02 }}
+              whileTap={{ scale: status === 'loading' ? 1 : 0.97 }}
               className="block w-full py-3 rounded-2xl font-bold text-sm text-center"
               style={{ background: '#166534', color: 'white' }}
             >
-              ⬆️ Importer un fichier
+              {status === 'loading' ? '⏳ Import en cours…' : '⬆️ Importer un fichier'}
             </motion.span>
-            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              disabled={status === 'loading'}
+              onChange={handleImport}
+            />
           </label>
         </motion.div>
 
