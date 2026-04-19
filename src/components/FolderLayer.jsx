@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { ChevronLeft, Folder } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -29,6 +29,7 @@ export default function FolderLayer({
 }) {
   if (!folder) return null;
 
+  const dragControls = useDragControls();
   const pal    = PALETTE.find(p => p.bg === folder.color) || PALETTE[8];
   const pageBg = dark ? '#1a1a2e' : '#FAFAFA';
 
@@ -41,16 +42,22 @@ export default function FolderLayer({
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         drag="y"
+        dragControls={dragControls}
+        dragListener={false}
         dragConstraints={{ top: 0 }}
         dragElastic={{ top: 0, bottom: 0.3 }}
         onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
         className="fixed inset-0 z-30 flex flex-col"
-        style={{ background: pageBg, touchAction: 'none' }}
+        style={{ background: pageBg }}
       >
         <DotGrid dark={dark} />
 
-        {/* Coloured header */}
-        <div className="relative shrink-0" style={{ background: folder.color, minHeight: 100 }}>
+        {/* Coloured header — drag-to-close starts here only */}
+        <div
+          className="relative shrink-0"
+          style={{ background: folder.color, minHeight: 100, touchAction: 'none' }}
+          onPointerDown={e => dragControls.start(e)}
+        >
           <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
             <button
               onClick={onClose}

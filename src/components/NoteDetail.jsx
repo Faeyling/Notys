@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import {
   ChevronLeft, Edit3, Star, ArrowRight, Palette, Eye, Copy, Trash2,
   Play, Pause, Check, Mic,
@@ -23,8 +23,9 @@ export default function NoteDetail({
   const [showVoice, setShowVoice] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const audioRef = useRef(null);
-  const saveTimer = useRef(null);
+  const audioRef    = useRef(null);
+  const saveTimer   = useRef(null);
+  const dragControls = useDragControls();
 
   useEffect(() => {
     if (note) {
@@ -88,14 +89,20 @@ export default function NoteDetail({
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         drag="y"
+        dragControls={dragControls}
+        dragListener={false}
         dragConstraints={{ top: 0 }}
         dragElastic={{ top: 0, bottom: 0.4 }}
         onDragEnd={(_, info) => { if (info.offset.y > 120) { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); } }}
         className="fixed inset-0 z-40 flex flex-col"
-        style={{ background: '#FAFAFA', touchAction: 'none' }}
+        style={{ background: '#FAFAFA' }}
       >
-        {/* Colored wave header */}
-        <div className="relative shrink-0" style={{ background: note.color, minHeight: 110 }}>
+        {/* Colored wave header — drag-to-close starts here only */}
+        <div
+          className="relative shrink-0"
+          style={{ background: note.color, minHeight: 110, touchAction: 'none' }}
+          onPointerDown={e => dragControls.start(e)}
+        >
           {/* Top bar */}
           <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-1 relative z-10 gap-1">
             <IconBtn onClick={() => { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); }}>
