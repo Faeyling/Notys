@@ -6,6 +6,7 @@ import {
   Play, Pause, Check, Mic,
 } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
+import { NoteDB } from '@/lib/db';
 import MarkdownEditor, { renderMarkdown } from './MarkdownEditor';
 import TripleWave from './TripleWave';
 import ColorPicker from './ColorPicker';
@@ -30,18 +31,18 @@ export default function NoteDetail({
 
   /* Refs so the unmount cleanup can read the latest values without stale closures */
   const latestRef = useRef({ note: null, title: '', content: '' });
-  const onSaveRef = useRef(onSave);
-  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
   useEffect(() => { latestRef.current.note    = note;    }, [note]);
   useEffect(() => { latestRef.current.title   = title;   }, [title]);
   useEffect(() => { latestRef.current.content = content; }, [content]);
 
-  /* Save on unmount (covers hardware back-button close) */
+  /* Save directly to DB on unmount (hardware back-button, etc.)
+     Bypasses handleSaveNote in Home to avoid the setOpenNote race condition
+     that would reopen the note just as it was closing. */
   useEffect(() => {
     return () => {
       clearTimeout(saveTimer.current);
       const { note: n, title: t, content: c } = latestRef.current;
-      if (n) onSaveRef.current?.(n, { title: t, content: c });
+      if (n?.id) NoteDB.update(n.id, { title: t, content: c }).catch(() => {});
     };
   }, []);
 
@@ -215,7 +216,7 @@ export default function NoteDetail({
               backgroundSize: '22px 22px',
             }}
           />
-          <div className="relative z-10 px-5 py-4 pb-16 min-h-full" style={{ touchAction: 'auto' }}>
+          <div className="relative z-10 px-5 py-4 pb-4 min-h-full flex flex-col" style={{ touchAction: 'auto' }}>
             {editing ? (
               showPreview ? (
                 <div
