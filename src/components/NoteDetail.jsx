@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import useVisualViewport from '@/hooks/useVisualViewport';
 import {
   ChevronLeft, Edit3, Star, ArrowRight, Palette, Eye, Copy, Trash2,
   Play, Pause, Check, Mic,
@@ -84,6 +85,8 @@ export default function NoteDetail({
     onSave(note, { audio_data: audioData });
   };
 
+  const vpHeight = useVisualViewport();
+
   if (!note) return null;
   const pal = PALETTE.find(p => p.bg === note.color) || PALETTE[8];
 
@@ -111,8 +114,8 @@ export default function NoteDetail({
         dragConstraints={{ top: 0 }}
         dragElastic={{ top: 0, bottom: 0.4 }}
         onDragEnd={(_, info) => { if (info.offset.y > 120) { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); } }}
-        className="fixed inset-0 z-40 flex flex-col"
-        style={{ background: '#FAFAFA' }}
+        className="fixed z-40 flex flex-col"
+        style={{ top: 0, left: 0, right: 0, height: vpHeight, background: '#FAFAFA' }}
       >
         {/* Colored wave header — drag-to-close starts here only */}
         <div
