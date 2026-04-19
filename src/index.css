@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Fonts ─────────────────────────────── */
+/* ── Global reset ────────────────────── */
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
@@ -20,25 +20,6 @@ body {
 
 /* ── Safe area support ───────────────── */
 .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
-
-/* ── Markdown preview ────────────────── */
-.markdown-preview h1 { font-size: 1.25rem; font-weight: 800; margin: 12px 0 6px; }
-.markdown-preview h2 { font-size: 1.1rem;  font-weight: 700; margin: 10px 0 4px; }
-.markdown-preview h3 { font-size: 1rem;    font-weight: 700; margin: 8px 0 4px; }
-.markdown-preview ul { padding-left: 18px; list-style: disc; }
-.markdown-preview ol { padding-left: 18px; list-style: decimal; }
-.markdown-preview li { margin: 2px 0; }
-.markdown-preview code {
-  background: rgba(0,0,0,0.08);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.88em;
-  font-family: monospace;
-}
-.markdown-preview p { margin: 2px 0; }
-.markdown-preview strong { font-weight: 700; }
-.markdown-preview em { font-style: italic; }
-.markdown-preview u { text-decoration: underline; }
 
 /* ── Dark mode overrides ─────────────── */
 .dark body { background: #1a1a2e; color: #f0f0f0; }

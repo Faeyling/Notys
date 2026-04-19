@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { SORT_OPTIONS } from '@/lib/constants';
 
 export default function SortMenu({ value, onChange }) {

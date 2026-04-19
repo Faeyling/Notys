@@ -22,7 +22,7 @@ function EmptyFolder() {
 }
 
 export default function FolderLayer({
-  folder, items, folders, onClose,
+  folder, items, onClose,
   onOpenNote, onOpenFolder,
   onToggleStar, onDelete, onColorChange, onDragEnd,
   dark,
@@ -51,7 +51,7 @@ export default function FolderLayer({
 
         {/* Coloured header */}
         <div className="relative shrink-0" style={{ background: folder.color, minHeight: 100 }}>
-          <div className="flex items-center gap-3 px-4 pt-safe pt-4 pb-8 relative z-10">
+          <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
             <button
               onClick={onClose}
               className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-90"

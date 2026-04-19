@@ -1,7 +1,6 @@
 import { PALETTE } from '@/lib/constants';
 
-export default function ColorPicker({ value, onChange, small = false }) {
-  const size = small ? 24 : 28;
+export default function ColorPicker({ value, onChange }) {
   return (
     <div className="flex gap-2 flex-wrap">
       {PALETTE.map(p => (
@@ -11,8 +10,8 @@ export default function ColorPicker({ value, onChange, small = false }) {
           title={p.name}
           className="rounded-full transition-all duration-200 focus:outline-none shrink-0"
           style={{
-            width: size,
-            height: size,
+            width: 28,
+            height: 28,
             background: p.bg,
             transform: value === p.bg ? 'scale(1.3)' : 'scale(1)',
             boxShadow: value === p.bg

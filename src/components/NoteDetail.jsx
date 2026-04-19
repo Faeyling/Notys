@@ -197,7 +197,7 @@ export default function NoteDetail({
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                 />
               ) : (
-                <MarkdownEditor value={content} onChange={handleContentChange} fg="#374151" bg="#FAFAFA" />
+                <MarkdownEditor value={content} onChange={handleContentChange} fg="#374151" />
               )
             ) : (
               content ? (

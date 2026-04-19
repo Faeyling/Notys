@@ -13,7 +13,7 @@ const TOOLBAR = [
   { label: 'Liste numérotée', linePrefix: '1. ', text: '1.' },
 ];
 
-export default function MarkdownEditor({ value, onChange, fg, bg }) {
+export default function MarkdownEditor({ value, onChange, fg }) {
   const taRef = useRef(null);
 
   const apply = (tool) => {
