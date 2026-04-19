@@ -269,8 +269,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
             </p>
             <p className="text-xs leading-relaxed" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
               Tes notes sont stockées <strong>uniquement sur cet appareil</strong>, localement et
-              en sécurité. Aucune donnée n'est envoyée vers un serveur. Code en accès libre : https://github.com/Faeyling/Notys. Pour contacter la maman de Noty : faeyling@proton.me{' '}
-              <span style={{ opacity: 0.65 }}>— Fäeyling</span>
+              en sécurité. Aucune donnée n'est envoyée vers un serveur. <br/>Code en <strong>accès libre</strong> : https://github.com/Faeyling/Notys. <br/>Pour <strong>contacter la maman de Noty</strong> : faeyling@proton.me{' '}
             </p>
           </div>
         </motion.div>
@@ -292,6 +291,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
           <p className="text-xs leading-relaxed mb-4" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
             Je garde tes notes précieusement, mais si tu supprimes l'app sans export,
             elles s'envoleront pour toujours. Sois prudent ! 🐾
+            <span style={{ opacity: 0.65 }}>— Fäeyling</span>
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
