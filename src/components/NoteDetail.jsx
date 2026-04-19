@@ -14,7 +14,7 @@ import MoveModal from './MoveModal';
 import VoiceRecorder from './VoiceRecorder';
 
 export default function NoteDetail({
-  note, folders, onClose, onToggleStar, onDelete, onSave, onColorChange,
+  note, folders, dark, onClose, onToggleStar, onDelete, onSave, onColorChange,
 }) {
   const [editing, setEditing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -89,7 +89,9 @@ export default function NoteDetail({
   const vpHeight = useVisualViewport();
 
   if (!note) return null;
-  const pal = PALETTE.find(p => p.bg === note.color) || PALETTE[8];
+  const pal    = PALETTE.find(p => p.bg === note.color) || PALETTE[8];
+  const pageBg = dark ? '#1a1a2e' : '#FAFAFA';
+  const textFg = dark ? '#f0f0f0' : '#374151';
 
   const IconBtn = ({ onClick, children, active }) => (
     <button
@@ -116,7 +118,7 @@ export default function NoteDetail({
         dragElastic={{ top: 0, bottom: 0.4 }}
         onDragEnd={(_, info) => { if (info.offset.y > 120) { clearTimeout(saveTimer.current); onSave(note, { title, content }); onClose(); } }}
         className="fixed z-40 flex flex-col"
-        style={{ top: 0, left: 0, right: 0, height: vpHeight, background: '#FAFAFA' }}
+        style={{ top: 0, left: 0, right: 0, height: vpHeight, background: pageBg }}
       >
         {/* Colored wave header — drag-to-close starts here only */}
         <div
@@ -183,7 +185,7 @@ export default function NoteDetail({
             )}
           </div>
 
-          <TripleWave color="#FAFAFA" />
+          <TripleWave color={pageBg} />
         </div>
 
         {/* Color picker panel */}
@@ -194,7 +196,7 @@ export default function NoteDetail({
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="shrink-0 overflow-hidden"
-              style={{ background: '#F9FAFB', borderBottom: '1px solid #F3F4F6' }}
+              style={{ background: dark ? '#2d2d4a' : '#F9FAFB', borderBottom: `1px solid ${dark ? '#3d3d5a' : '#F3F4F6'}` }}
             >
               <div className="px-5 py-4">
                 <ColorPicker value={note.color} onChange={c => { onColorChange(note, c); setShowColorPicker(false); }} />
@@ -225,13 +227,13 @@ export default function NoteDetail({
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                 />
               ) : (
-                <MarkdownEditor value={content} onChange={handleContentChange} fg="#374151" />
+                <MarkdownEditor value={content} onChange={handleContentChange} fg={textFg} />
               )
             ) : (
               content ? (
                 <div
                   className="text-sm leading-relaxed"
-                  style={{ color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
+                  style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                 />
               ) : (
@@ -274,12 +276,13 @@ export default function NoteDetail({
               <motion.div
                 initial={{ scale: 0.88 }}
                 animate={{ scale: 1 }}
-                className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl text-center"
+                className="rounded-3xl p-6 w-full max-w-xs shadow-2xl text-center"
+                style={{ background: dark ? '#2d2d4a' : 'white' }}
               >
-                <p className="font-bold text-base mb-1" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>Supprimer ?</p>
-                <p className="text-sm mb-5" style={{ color: '#6B7280' }}>"{note.title}" sera supprimé définitivement.</p>
+                <p className="font-bold text-base mb-1" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>Supprimer ?</p>
+                <p className="text-sm mb-5" style={{ color: dark ? '#9CA3AF' : '#6B7280' }}>"{note.title}" sera supprimé définitivement.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-2xl font-semibold text-sm" style={{ background: '#F3F4F6', color: '#374151' }}>Annuler</button>
+                  <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-2xl font-semibold text-sm" style={{ background: dark ? '#374151' : '#F3F4F6', color: dark ? '#f0f0f0' : '#374151' }}>Annuler</button>
                   <button onClick={() => { onDelete(note); onClose(); }} className="flex-1 py-2.5 rounded-2xl font-semibold text-sm" style={{ background: '#FEE2E2', color: '#dc2626' }}>Supprimer</button>
                 </div>
               </motion.div>

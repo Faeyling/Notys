@@ -749,6 +749,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         <NoteDetail
           note={openNote}
           folders={folders}
+          dark={dark}
           onClose={() => setOpenNote(null)}
           onToggleStar={handleToggleStar}
           onDelete={handleDelete}

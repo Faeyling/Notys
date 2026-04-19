@@ -7,11 +7,11 @@ import Mascot from './Mascot';
 import DotGrid from './DotGrid';
 import TripleWave from './TripleWave';
 
-function EmptyFolder() {
+function EmptyFolder({ dark }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <Mascot variant="spa" size={90} />
-      <p className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+      <p className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
         Dossier vide
       </p>
       <p className="text-sm text-center max-w-xs" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
@@ -85,7 +85,7 @@ export default function FolderLayer({
           onPointerDown={e => e.stopPropagation()}
         >
           {items.length === 0 ? (
-            <EmptyFolder />
+            <EmptyFolder dark={dark} />
           ) : (
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId={`folder-content-${folder.id}`} direction="horizontal">
