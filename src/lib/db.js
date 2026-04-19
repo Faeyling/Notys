@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { PALETTE } from './constants';
 
 export const db = new Dexie('NotysDB_v5');
 
@@ -52,7 +53,10 @@ export function sortItems(items, sortId) {
     case 'date_asc':  return arr.sort((a, b) => (a.created_date || '').localeCompare(b.created_date || ''));
     case 'name_asc':  return arr.sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
     case 'name_desc': return arr.sort((a, b) => (b.title || b.name || '').localeCompare(a.title || a.name || ''));
-    case 'color':     return arr.sort((a, b) => (a.color || '').localeCompare(b.color || ''));
+    case 'color': {
+      const order = Object.fromEntries(PALETTE.map((p, i) => [p.bg, i]));
+      return arr.sort((a, b) => (order[a.color] ?? 999) - (order[b.color] ?? 999));
+    }
     case 'opened':    return arr.sort((a, b) => (b.last_opened_date || b.updated_date || '').localeCompare(a.last_opened_date || a.updated_date || ''));
     case 'manual':    return arr.sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER));
     default:          return arr;
