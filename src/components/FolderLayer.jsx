@@ -24,7 +24,7 @@ function EmptyFolder() {
 export default function FolderLayer({
   folder, items, onClose,
   onOpenNote, onOpenFolder,
-  onToggleStar, onDelete, onColorChange, onDragEnd,
+  onToggleStar, onDelete, onColorChange, onRename, onDragEnd,
   dark,
 }) {
   if (!folder) return null;
@@ -102,8 +102,8 @@ export default function FolderLayer({
                                 onOpen={isFolder ? onOpenFolder : onOpenNote}
                                 onToggleStar={onToggleStar}
                                 onDelete={onDelete}
-                                /* onColorChange receives only (item) → bubbles to Home's setColorTarget */
                                 onColorChange={onColorChange}
+                                onRename={onRename}
                                 isDragging={s.isDragging}
                                 dark={dark}
                               />

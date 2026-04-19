@@ -54,7 +54,7 @@ function EmptyState({ tab, hasQuery, animated, dark }) {
 }
 
 /* ── Unified grid with DnD ──────────────────────────── */
-function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onColorChange, onDragEnd, dark }) {
+function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onColorChange, onRename, onDragEnd, dark }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="main-grid" direction="horizontal">
@@ -91,6 +91,7 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
                                 onToggleStar={() => {}}
                                 onDelete={onDelete}
                                 onColorChange={onColorChange}
+                                onRename={onRename}
                                 isDragging={s.isDragging}
                                 dark={dark}
                               />
@@ -272,6 +273,12 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
       await NoteDB.delete(item.id);
     }
     if (openNote?.id === item.id) setOpenNote(null);
+  };
+
+  const handleRename = async (item, newName) => {
+    setFolders(prev => prev.map(f => f.id === item.id ? { ...f, name: newName } : f));
+    if (openFolder?.id === item.id) setOpenFolder(f => ({ ...f, name: newName }));
+    await FolderDB.update(item.id, { name: newName });
   };
 
   const handleMove = async (item, targetFolder) => {
@@ -485,8 +492,8 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                     onOpenFolder={f => setOpenFolder(f)}
                     onToggleStar={handleToggleStar}
                     onDelete={handleDelete}
-                    /* Opens the ColorChangeModal — persisted in handleColorChange */
                     onColorChange={item => setColorTarget(item)}
+                    onRename={handleRename}
                     onDragEnd={handleDragEnd}
                     dark={dark}
                   />
@@ -555,6 +562,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
                           onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
                           onDelete={handleDelete}
                           onColorChange={i => setColorTarget(i)}
+                          onRename={handleRename}
                           dark={dark}
                         />
                       ))}
@@ -747,6 +755,7 @@ export default function Home({ onGoBackup, dark, setDark, animated }) {
           onToggleStar={handleToggleStar}
           onDelete={handleDelete}
           onColorChange={item => setColorTarget(item)}
+          onRename={handleRename}
           onDragEnd={handleDragEnd}
           dark={dark}
         />

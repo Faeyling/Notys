@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, Star, Trash2, Palette, Play, Mic } from 'lucide-react';
+import { Folder, Star, Trash2, Palette, Play, Mic, Edit2 } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 
 export default function GridCard({
-  item, type, onOpen, onToggleStar, onDelete, onColorChange, isDragging, dark,
+  item, type, onOpen, onToggleStar, onDelete, onColorChange, onRename, isDragging, dark,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [renaming, setRenaming]   = useState(false);
+  const [renameVal, setRenameVal] = useState('');
+  const renameRef = useRef(null);
 
   /* Palette — in dark mode notes blend with the page background */
   const pal        = PALETTE.find(p => p.bg === item.color) || PALETTE[8];
@@ -18,6 +21,23 @@ export default function GridCard({
   const cardBorder = isDarkNote ? `1px solid ${pal.bg}40` : 'none';
 
   const stopProp = fn => e => { e.stopPropagation(); fn(e); };
+
+  const startRename = (e) => {
+    e.stopPropagation();
+    setRenameVal(item.name || item.title || '');
+    setRenaming(true);
+  };
+
+  const commitRename = () => {
+    const trimmed = renameVal.trim();
+    if (trimmed && trimmed !== (item.name || item.title)) onRename?.(item, trimmed);
+    setRenaming(false);
+  };
+
+  /* Focus the input as soon as it mounts */
+  useEffect(() => {
+    if (renaming) renameRef.current?.select();
+  }, [renaming]);
 
   const handlePlayAudio = (e) => {
     e.stopPropagation();
@@ -58,24 +78,42 @@ export default function GridCard({
           className="flex items-start justify-between px-3 pt-3 shrink-0"
           style={{ minHeight: 52 }}
         >
-          {/* Icon + title */}
+          {/* Icon + title (or rename input for folders) */}
           <div className="flex items-start gap-1.5 flex-1 min-w-0 pr-1">
-            {type === 'folder' && (
+            {type === 'folder' && !renaming && (
               <Folder size={12} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
             )}
             {type === 'note' && item.type === 'voice' && (
               <Mic size={11} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
             )}
-            <p
-              className="font-bold text-xs leading-tight line-clamp-3"
-              style={{ color: titleColor, fontFamily: '"Quicksand", sans-serif', fontWeight: 700 }}
-            >
-              {item.title || item.name || 'Sans titre'}
-            </p>
+            {renaming ? (
+              <input
+                ref={renameRef}
+                value={renameVal}
+                onChange={e => setRenameVal(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={e => {
+                  if (e.key === 'Enter')  { e.preventDefault(); commitRename(); }
+                  if (e.key === 'Escape') { e.preventDefault(); setRenaming(false); }
+                  e.stopPropagation();
+                }}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                className="w-full bg-transparent outline-none border-b font-bold text-xs leading-tight"
+                style={{ color: titleColor, borderColor: `${titleColor}60`, fontFamily: '"Quicksand", sans-serif' }}
+              />
+            ) : (
+              <p
+                className="font-bold text-xs leading-tight line-clamp-3"
+                style={{ color: titleColor, fontFamily: '"Quicksand", sans-serif', fontWeight: 700 }}
+              >
+                {item.title || item.name || 'Sans titre'}
+              </p>
+            )}
           </div>
 
-          {/* Action icons: palette + delete
-              onMouseDown/onTouchStart stop propagation so DnD never fires from these */}
+          {/* Action icons — onMouseDown/onTouchStart stop propagation so DnD never fires */}
           <div
             className="flex items-center gap-1 shrink-0"
             onMouseDown={e => e.stopPropagation()}
@@ -89,6 +127,17 @@ export default function GridCard({
             >
               <Palette size={10} style={{ color: titleColor }} />
             </button>
+            {/* Rename — folders only */}
+            {type === 'folder' && (
+              <button
+                onClick={startRename}
+                className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+                style={{ background: renaming ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.09)' }}
+                aria-label="Renommer"
+              >
+                <Edit2 size={10} style={{ color: titleColor }} />
+              </button>
+            )}
             <button
               onClick={stopProp(() => setShowDeleteConfirm(true))}
               className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
