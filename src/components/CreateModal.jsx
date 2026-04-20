@@ -14,11 +14,12 @@ export default function CreateModal({
   /** 'note' | 'folder' | 'voice' — pre-selects the tab when the modal opens */
   defaultType = 'note',
 }) {
-  const [type, setType]       = useState(defaultType || 'note');
-  const [title, setTitle]     = useState('');
-  const [content, setContent] = useState('');
-  const [color, setColor]     = useState(defaultColor || DEFAULT_COLOR);
+  const [type, setType]         = useState(defaultType || 'note');
+  const [title, setTitle]       = useState('');
+  const [content, setContent]   = useState('');
+  const [color, setColor]       = useState(defaultColor || DEFAULT_COLOR);
   const [folderId, setFolderId] = useState(parentFolderId || '');
+  const [attempted, setAttempted] = useState(false);
 
   const modalRef  = useRef(null);
   const titleRef  = useRef(null);
@@ -30,6 +31,7 @@ export default function CreateModal({
       setColor(defaultColor || DEFAULT_COLOR);
       setFolderId(parentFolderId || '');
       setType(defaultType || 'note');
+      setAttempted(false);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [show, parentFolderId, defaultColor, defaultType]);
@@ -48,7 +50,7 @@ export default function CreateModal({
   };
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!title.trim()) { setAttempted(true); titleRef.current?.focus(); return; }
     onSave({ title: title.trim(), content, color, is_favorite: false, folder_id: folderId || null, type });
     onClose();
   };
@@ -126,23 +128,32 @@ export default function CreateModal({
 
           <div className="space-y-3">
             <label className="sr-only" htmlFor="create-title">
-              {type === 'folder' ? 'Nom du dossier' : 'Titre de la note'}
+              {type === 'folder' ? 'Nom du dossier' : 'Titre de la note'} *
             </label>
-            <input
-              id="create-title"
-              ref={titleRef}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
-              placeholder={type === 'folder' ? 'Nom du dossier...' : 'Titre de la note...'}
-              className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all"
-              style={{
-                borderColor: pal.bg,
-                background: `${pal.bg}22`,
-                color: '#111827',
-                fontFamily: 'Quicksand, sans-serif',
-              }}
-            />
+            <div>
+              <input
+                id="create-title"
+                ref={titleRef}
+                value={title}
+                onChange={e => { setTitle(e.target.value); if (attempted) setAttempted(false); }}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                placeholder={type === 'folder' ? 'Nom du dossier...' : 'Titre de la note...'}
+                aria-required="true"
+                aria-invalid={attempted && !title.trim()}
+                className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all"
+                style={{
+                  borderColor: attempted && !title.trim() ? '#ef4444' : pal.bg,
+                  background: attempted && !title.trim() ? '#fef2f2' : `${pal.bg}22`,
+                  color: '#111827',
+                  fontFamily: 'Quicksand, sans-serif',
+                }}
+              />
+              {attempted && !title.trim() && (
+                <p className="text-xs mt-1 px-1" style={{ color: '#ef4444', fontFamily: 'Quicksand, sans-serif' }}>
+                  Ce champ est requis
+                </p>
+              )}
+            </div>
 
             {type === 'note' && (
               <>

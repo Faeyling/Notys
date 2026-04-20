@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Home as HomeIcon, Star, Search, HardDrive,
-  HelpCircle, Moon, Sun, SlidersHorizontal, Folder, FileText, Mic,
+  HelpCircle, Moon, Sun, SlidersHorizontal, Folder, FileText, Mic, X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NoteDB, FolderDB, sortItems } from '@/lib/db';
@@ -587,14 +587,24 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                     placeholder="Rechercher..."
                     aria-label="Rechercher tes notes"
                     autoFocus
-                    className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm outline-none border-2"
+                    className="w-full pl-9 py-2.5 rounded-2xl text-sm outline-none border-2"
                     style={{
+                      paddingRight: searchQ ? '2.25rem' : '1rem',
                       borderColor: '#b4daf3',
                       background: '#b4daf322',
                       color: dark ? '#f0f0f0' : '#111827',
                       fontFamily: 'Quicksand, sans-serif',
                     }}
                   />
+                  {searchQ && (
+                    <button
+                      onClick={() => setSearchQ('')}
+                      aria-label="Effacer la recherche"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-all hover:scale-110 active:scale-90"
+                    >
+                      <X size={14} style={{ color: '#9CA3AF' }} />
+                    </button>
+                  )}
                 </div>
               </div>
               {searchQ && searchResults.length === 0
@@ -691,6 +701,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.92 }}
           onClick={() => setShowFab(v => !v)}
+          aria-label={showFab ? 'Fermer le menu de création' : 'Créer une note ou un dossier'}
+          aria-expanded={showFab}
           className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
           style={{ background: 'linear-gradient(135deg, #f9a8d4, #e879a0)', boxShadow: '0 8px 32px #f9a8d490' }}
         >

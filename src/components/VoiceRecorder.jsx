@@ -291,10 +291,14 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           {phase === 'preview' && (
             <button
               onClick={() => { setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null); }}
-              className="mt-4 text-xs font-semibold"
-              style={{ color: `${pal.fg}80`, fontFamily: 'Quicksand, sans-serif' }}
+              className="mt-4 px-5 py-2 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+              style={{
+                color: pal.bg,
+                background: `${pal.fg}25`,
+                fontFamily: 'Quicksand, sans-serif',
+              }}
             >
-              Ré-enregistrer
+              🔄 Ré-enregistrer
             </button>
           )}
         </motion.div>

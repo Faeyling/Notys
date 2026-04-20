@@ -89,6 +89,7 @@ export default function GridCard({
             {renaming ? (
               <input
                 ref={renameRef}
+                placeholder={item.name || item.title || 'Nouveau nom'}
                 value={renameVal}
                 onChange={e => setRenameVal(e.target.value)}
                 onBlur={commitRename}
