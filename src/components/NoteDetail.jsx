@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import useVisualViewport from '@/hooks/useVisualViewport';
 import {
   ChevronLeft, Edit3, Star, ArrowRight, Palette, Eye, Copy, Trash2,
-  Play, Pause, Check, Mic,
+  Play, Pause, Check, Mic, AlertCircle,
 } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 import { NoteDB } from '@/lib/db';
@@ -26,6 +26,8 @@ export default function NoteDetail({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
+  const saveStateTimer = useRef(null);
   const audioRef     = useRef(null);
   const saveTimer    = useRef(null);
   const dragControls = useDragControls();
@@ -57,11 +59,19 @@ export default function NoteDetail({
     }
   }, [note?.id]);
 
-  /* Auto-save while editing */
+  /* Auto-save while editing — with visible feedback */
   const autoSave = useCallback((newTitle, newContent) => {
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      onSave(note, { title: newTitle, content: newContent });
+    clearTimeout(saveStateTimer.current);
+    setSaveState('saving');
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await onSave(note, { title: newTitle, content: newContent });
+        setSaveState('saved');
+      } catch {
+        setSaveState('error');
+      }
+      saveStateTimer.current = setTimeout(() => setSaveState('idle'), 1500);
     }, 800);
   }, [note, onSave]);
 
@@ -146,6 +156,35 @@ export default function NoteDetail({
             >
               <ChevronLeft size={18} style={{ color: pal.fg }} />
             </IconBtn>
+
+            {/* Auto-save indicator */}
+            <AnimatePresence>
+              {saveState !== 'idle' && (
+                <motion.span
+                  key={saveState}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  className="text-xs font-bold flex items-center gap-1 px-2 py-1 rounded-xl"
+                  style={{
+                    background: 'rgba(0,0,0,0.15)',
+                    color: pal.fg,
+                    fontFamily: 'Quicksand, sans-serif',
+                  }}
+                  aria-live="polite"
+                  aria-label={
+                    saveState === 'saving' ? 'Enregistrement en cours' :
+                    saveState === 'saved'  ? 'Note enregistrée' :
+                    'Erreur d\'enregistrement'
+                  }
+                >
+                  {saveState === 'saving' && <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block', fontSize: 10 }}>⟳</motion.span>}
+                  {saveState === 'saved'  && <Check size={11} />}
+                  {saveState === 'error'  && <AlertCircle size={11} />}
+                  {saveState === 'saving' ? 'Enreg…' : saveState === 'saved' ? 'Enregistré' : 'Erreur'}
+                </motion.span>
+              )}
+            </AnimatePresence>
 
             <div className="flex items-center gap-1 flex-wrap justify-end">
               <IconBtn onClick={() => setEditing(v => !v)} active={editing} ariaLabel={editing ? 'Quitter l\'édition' : 'Modifier la note'}>

@@ -53,25 +53,40 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
   /* ── Export ── */
   const handleExport = async () => {
     setStatus('loading');
-    const [notes, folders] = await Promise.all([NoteDB.list(), FolderDB.list()]);
-    const safeNotes   = notes.map(n => pick(n, NOTE_FIELDS));
-    const safeFolders = folders.map(f => pick(f, FOLDER_FIELDS));
-    const data = { version: 2, app: "Noty's", exported_at: new Date().toISOString(), notes: safeNotes, folders: safeFolders };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `notys-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatus('success');
-    setMessage(`Noty a bien enregistré ton export ! (${notes.length} notes, ${folders.length} dossiers)`);
+    try {
+      const [notes, folders] = await Promise.all([NoteDB.list(), FolderDB.list()]);
+      const safeNotes   = notes.map(n => pick(n, NOTE_FIELDS));
+      const safeFolders = folders.map(f => pick(f, FOLDER_FIELDS));
+      const data = { version: 2, app: "Noty's", exported_at: new Date().toISOString(), notes: safeNotes, folders: safeFolders };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `notys-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      /* Defer revoke so the browser has time to start the download */
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setStatus('success');
+      setMessage(`Noty a bien enregistré ton export ! (${notes.length} notes, ${folders.length} dossiers)`);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err?.message || 'Erreur lors de l\'export.');
+    }
   };
 
   /* ── Import ── */
   const handleImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    /* Guard: reject obviously oversized files before parsing */
+    if (file.size > 50 * 1024 * 1024) {
+      setStatus('error');
+      setMessage('Fichier trop volumineux (max 50 Mo).');
+      e.target.value = '';
+      return;
+    }
+
     setStatus('loading');
     try {
       const text = await file.text();
@@ -83,34 +98,38 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
       if (data.folders !== undefined && !Array.isArray(data.folders)) throw new Error('Format invalide : tableau "folders" incorrect.');
       if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
       if (data.folders && hasFolderCycle(data.folders)) throw new Error('Structure corrompue : cycle détecté dans les dossiers.');
-      await db.notes.clear();
-      await db.folders.clear();
 
-      /* ── Step 1 : insert folders (only whitelisted fields) ── */
-      const folderIdMap = {};
-      for (const f of (data.folders || [])) {
-        const { id: oldId, parent_id, ...rest } = f;
-        const safeRest = pick(rest, FOLDER_FIELDS.filter(k => k !== 'id' && k !== 'parent_id'));
-        const newId = await db.folders.add({ ...safeRest, parent_id: null });
-        if (oldId != null) folderIdMap[oldId] = newId;
-      }
+      /* ── Atomic transaction: if any step throws, IndexedDB rolls back fully ── */
+      await db.transaction('rw', db.notes, db.folders, async () => {
+        await db.notes.clear();
+        await db.folders.clear();
 
-      /* ── Step 2 : restore parent_id using the remapped IDs ── */
-      for (const f of (data.folders || [])) {
-        if (f.parent_id != null) {
-          const newId       = folderIdMap[f.id];
-          const newParentId = folderIdMap[f.parent_id] ?? null;
-          if (newId != null) await db.folders.update(newId, { parent_id: newParentId });
+        /* Step 1 : insert folders (only whitelisted fields) */
+        const folderIdMap = {};
+        for (const f of (data.folders || [])) {
+          const { id: oldId, parent_id, ...rest } = f;
+          const safeRest = pick(rest, FOLDER_FIELDS.filter(k => k !== 'id' && k !== 'parent_id'));
+          const newId = await db.folders.add({ ...safeRest, parent_id: null });
+          if (oldId != null) folderIdMap[oldId] = newId;
         }
-      }
 
-      /* ── Step 3 : insert notes (only whitelisted fields) ── */
-      for (const n of (data.notes || [])) {
-        const { id, folder_id, ...rest } = n;
-        const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
-        const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
-        await db.notes.add({ ...safeRest, folder_id: newFolderId });
-      }
+        /* Step 2 : restore parent_id using the remapped IDs */
+        for (const f of (data.folders || [])) {
+          if (f.parent_id != null) {
+            const newId       = folderIdMap[f.id];
+            const newParentId = folderIdMap[f.parent_id] ?? null;
+            if (newId != null) await db.folders.update(newId, { parent_id: newParentId });
+          }
+        }
+
+        /* Step 3 : insert notes (only whitelisted fields) */
+        for (const n of (data.notes || [])) {
+          const { id, folder_id, ...rest } = n;
+          const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
+          const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
+          await db.notes.add({ ...safeRest, folder_id: newFolderId });
+        }
+      });
 
       setStatus('success');
       setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);

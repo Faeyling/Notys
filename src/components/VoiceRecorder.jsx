@@ -16,7 +16,7 @@ function blobToBase64(blob) {
 }
 
 export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
-  const [phase, setPhase] = useState('idle'); // idle | recording | preview
+  const [phase, setPhase] = useState('idle'); // idle | recording | converting | preview
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState(note?.audio_data || null);
@@ -29,6 +29,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   const audioRef      = useRef(null);
   const analyserRef   = useRef(null);
   const animFrameRef  = useRef(null);
+  const audioCtxRef   = useRef(null);
   const modalRef      = useRef(null);
 
   const pal = PALETTE.find(p => p.bg === color) || PALETTE[8];
@@ -70,6 +71,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
       /* Visualiser */
       const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
       const src = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 64;
@@ -92,6 +94,11 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       recorder.onstop = async () => {
         cancelAnimationFrame(animFrameRef.current);
         stream.getTracks().forEach(t => t.stop());
+        audioCtxRef.current?.close().catch(() => {});
+        audioCtxRef.current = null;
+        /* Show converting indicator while FileReader encodes the blob */
+        setPhase('converting');
+        setBars(Array(24).fill(4));
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const url = await blobToBase64(blob);
         /* Size guard: base64 is ~4/3 of binary size */
@@ -190,7 +197,9 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           style={{ background: pal.bg }}
         >
           <p className="font-bold text-base mb-4" style={{ color: pal.fg, fontFamily: '"Cherry Bomb One", cursive' }}>
-            {phase === 'recording' ? 'Enregistrement…' : phase === 'preview' ? 'Écouter' : 'Note vocale'}
+            {phase === 'recording'  ? 'Enregistrement…' :
+             phase === 'converting' ? 'Traitement…' :
+             phase === 'preview'    ? 'Écouter' : 'Note vocale'}
           </p>
 
           {/* Error message */}
@@ -229,13 +238,29 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
             )}
           </p>
 
+          {/* Converting spinner */}
+          {phase === 'converting' && (
+            <div className="flex flex-col items-center gap-2 mb-4">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-8 h-8 rounded-full border-4"
+                style={{ borderColor: `${pal.fg}30`, borderTopColor: pal.fg }}
+              />
+              <p className="text-xs font-semibold" style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif', opacity: 0.7 }}>
+                Préparation de l'audio…
+              </p>
+            </div>
+          )}
+
           {/* Controls */}
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={onClose}
+              disabled={phase === 'converting'}
               aria-label="Fermer l'enregistreur"
               className="w-11 h-11 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(0,0,0,0.12)' }}
+              style={{ background: 'rgba(0,0,0,0.12)', opacity: phase === 'converting' ? 0.4 : 1 }}
             >
               <X size={18} style={{ color: pal.fg }} />
             </button>

@@ -656,7 +656,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       </div>
 
       {/* ── FAB ── */}
-      <div className="fixed z-40" style={{ bottom: 86, right: 20 }}>
+      <div
+        className="fixed z-40"
+        style={{ bottom: 86, right: 20 }}
+        onKeyDown={e => { if (e.key === 'Escape' && showFab) { setShowFab(false); } }}
+      >
         <AnimatePresence>
           {showFab && (
             <>
