@@ -155,10 +155,11 @@ const VARIANTS = {
   protector: CapyProtector,
 };
 
-export default function Mascot({ variant = 'spa', size = 100, animate = true }) {
+export default function Mascot({ variant = 'spa', size = 100, animate = true, 'aria-hidden': ariaHidden }) {
   const Comp = VARIANTS[variant] || CapySpa;
   return (
     <motion.div
+      aria-hidden={ariaHidden ?? true}
       style={{ width: size, height: size, flexShrink: 0 }}
       animate={animate ? { y: [0, -6, 0] } : {}}
       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}

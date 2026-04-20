@@ -471,6 +471,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowSort(v => !v)}
+                  aria-label="Trier les notes"
+                  aria-expanded={showSort}
                   className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
@@ -478,6 +480,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 </button>
                 <button
                   onClick={() => setDark(v => !v)}
+                  aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
                   className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
@@ -487,6 +490,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 </button>
                 <button
                   onClick={() => setShowHelp(true)}
+                  aria-label="Aide"
                   className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
@@ -685,6 +689,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                       setCreateType(type);   // remembered for defaultType
                       setShowCreate(true);
                     }}
+                    aria-label={`Créer une ${label.toLowerCase()}`}
                     className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg"
                     style={{ background: color }}
                   >
@@ -714,7 +719,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
 
       {/* ── Bottom nav ── */}
       {!landscape && (
-        <div
+        <nav
+          aria-label="Navigation principale"
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-30"
           style={{
             background: dark ? 'rgba(26,26,46,0.97)' : 'rgba(255,255,255,0.97)',
@@ -737,6 +743,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 <button
                   key={id}
                   onClick={() => setTab(id)}
+                  aria-label={label}
+                  aria-current={active ? 'page' : undefined}
                   className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all relative"
                 >
                   {active && (
@@ -750,10 +758,12 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                     size={20}
                     fill={starFill}
                     style={{ color: iconColor }}
+                    aria-hidden="true"
                   />
                   <span
                     className="text-xs font-semibold"
                     style={{ color: iconColor, fontFamily: 'Quicksand, sans-serif', fontSize: 10 }}
+                    aria-hidden="true"
                   >
                     {label}
                   </span>
@@ -761,7 +771,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               );
             })}
           </div>
-        </div>
+        </nav>
       )}
 
       {/* ── All modals / overlays ── */}

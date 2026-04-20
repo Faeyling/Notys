@@ -113,6 +113,7 @@ export default function CreateModal({
                 key={id}
                 role="tab"
                 aria-selected={type === id}
+                aria-controls="create-modal-panel"
                 onClick={() => setType(id)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all duration-200"
                 style={{
@@ -126,7 +127,7 @@ export default function CreateModal({
             ))}
           </div>
 
-          <div className="space-y-3">
+          <div id="create-modal-panel" role="tabpanel" className="space-y-3">
             <label className="sr-only" htmlFor="create-title">
               {type === 'folder' ? 'Nom du dossier' : 'Titre de la note'} *
             </label>

@@ -185,6 +185,8 @@ export default function GridCard({
                 onClick={stopProp(() => onToggleStar(item))}
                 onMouseDown={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
+                aria-label={item.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                aria-pressed={item.is_favorite}
                 className="transition-all hover:scale-110 active:scale-90"
               >
                 <Star
@@ -208,6 +210,9 @@ export default function GridCard({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirmer la suppression"
               className="fixed inset-0 flex items-center justify-center px-6"
               style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9999 }}
               onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}

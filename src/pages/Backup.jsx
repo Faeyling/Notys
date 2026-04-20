@@ -143,6 +143,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
           <button
             onClick={onBack}
+            aria-label="Retour"
             className="w-9 h-9 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-90 shrink-0"
             style={{ background: 'rgba(0,0,0,0.12)' }}
           >
@@ -159,7 +160,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
 
         {/* Mascot */}
         <div className="flex justify-center mb-2">
-          <Mascot variant="backpack" size={100} animate={animated} />
+          <Mascot variant="backpack" size={100} animate={animated} aria-hidden="true" />
         </div>
 
         {/* ── Animations toggle ── */}
@@ -388,6 +389,9 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         {showClearConfirm && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmer la suppression de toutes les données"
             className="fixed inset-0 z-50 flex items-center justify-center px-6"
             style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
           >

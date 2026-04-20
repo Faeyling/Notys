@@ -10,7 +10,7 @@ export default function ColorPicker({ value, onChange }) {
           title={p.name}
           aria-label={p.name}
           aria-pressed={value === p.bg}
-          className="rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 shrink-0"
+          className="rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-700 shrink-0"
           style={{
             width: 40,
             height: 40,
