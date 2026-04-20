@@ -9,7 +9,7 @@ import DotGrid from '@/components/DotGrid';
 const WAVE = '#ffadad';
 const FG   = '#7f1d1d';
 
-export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
+export default function Backup({ onBack, dark, animated, onToggleAnimations, onImportSuccess }) {
   /* Set status-bar to the page wave color on mount, restore on unmount */
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -84,6 +84,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
 
       setStatus('success');
       setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);
+      onImportSuccess?.(); /* reload Home state without page refresh */
     } catch (err) {
       setStatus('error');
       setMessage(err?.message || 'Fichier invalide ou corrompu.');

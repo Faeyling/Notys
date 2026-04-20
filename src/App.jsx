@@ -20,6 +20,7 @@ import useDarkMode from '@/hooks/useDarkMode';
 export default function App() {
   const [page, setPage]         = useState('home');
   const [dark, setDark]         = useDarkMode();
+  const [dataVersion, setDataVersion] = useState(0); // bumped after import to reload Home
   const [animated, setAnimated] = useState(() => {
     const s = localStorage.getItem('notys-animations');
     return s === null ? true : s === 'true';
@@ -63,6 +64,7 @@ export default function App() {
           animated={animated}
           onGoBackup={() => setPage('backup')}
           onRegisterBack={fn => { homeBackRef.current = fn; }}
+          dataVersion={dataVersion}
         />
       </div>
 
@@ -82,6 +84,7 @@ export default function App() {
               dark={dark}
               animated={animated}
               onToggleAnimations={handleToggleAnimations}
+              onImportSuccess={() => setDataVersion(v => v + 1)}
             />
           </motion.div>
         )}

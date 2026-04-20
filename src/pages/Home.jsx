@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Home as HomeIcon, Star, Search, HardDrive,
@@ -126,7 +126,7 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
 }
 
 /* ── Main App ─────────────────────────────────────────── */
-export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBack }) {
+export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBack, dataVersion = 0 }) {
   const landscape = useOrientation();
 
   const [tab, setTab]           = useState('home');
@@ -166,13 +166,16 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     });
   }, []); /* mount only — refs stay current */
 
-  /* Load data */
+  /* Load data — re-runs when dataVersion bumps (e.g. after Backup import) */
   useEffect(() => {
+    setLoading(true);
     Promise.all([NoteDB.list(), FolderDB.list()])
       .then(([n, f]) => { setNotes(n); setFolders(f); })
       .finally(() => setLoading(false));
-    setTimeout(() => { if (shouldShowBackupReminder()) setShowBackupReminder(true); }, 2000);
-  }, []);
+    if (dataVersion === 0) {
+      setTimeout(() => { if (shouldShowBackupReminder()) setShowBackupReminder(true); }, 2000);
+    }
+  }, [dataVersion]);
 
   /* Sort persistence */
   useEffect(() => { localStorage.setItem('notys-sort', sortId); }, [sortId]);
@@ -193,13 +196,29 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     wiggleTimer.current = setTimeout(() => setWiggle(false), 400);
   }, []);
 
-  /* Note count + sub-folder count per folder */
-  const foldersWithCount = folders.map(f => ({
+  /* O(n+m) maps for note/folder counts — recalculated only when data changes */
+  const noteCountByFolder = useMemo(() => {
+    const map = {};
+    for (const n of notes) {
+      if (n.folder_id != null) map[n.folder_id] = (map[n.folder_id] || 0) + 1;
+    }
+    return map;
+  }, [notes]);
+
+  const folderCountByParent = useMemo(() => {
+    const map = {};
+    for (const f of folders) {
+      if (f.parent_id != null) map[f.parent_id] = (map[f.parent_id] || 0) + 1;
+    }
+    return map;
+  }, [folders]);
+
+  const foldersWithCount = useMemo(() => folders.map(f => ({
     ...f,
-    _noteCount:   notes.filter(n => n.folder_id === f.id).length,
-    _folderCount: folders.filter(sf => sf.parent_id === f.id).length,
+    _noteCount:   noteCountByFolder[f.id]   || 0,
+    _folderCount: folderCountByParent[f.id] || 0,
     _type: 'folder',
-  }));
+  })), [folders, noteCountByFolder, folderCountByParent]);
 
   /* Derived views */
   const rootNotes   = notes.filter(n => !n.folder_id);
@@ -240,19 +259,31 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   /* ── Actions ── */
   const handleSave = async (data) => {
     if (data.type === 'folder') {
-      const payload = { name: data.title, color: data.color, parent_id: openFolder?.id || null };
+      /* In manual sort: prepend before the current first item */
+      const topPos = sortId === 'manual'
+        ? (homeItems[0]?.position ?? 0) - 1
+        : undefined;
+      const payload = {
+        name: data.title, color: data.color, parent_id: openFolder?.id || null,
+        ...(topPos !== undefined && { position: topPos }),
+      };
       const f = await FolderDB.create(payload);
       setFolders(prev => [f, ...prev]);
     } else {
       const folderColor = data.folder_id
         ? folders.find(f => f.id === Number(data.folder_id))?.color
         : null;
+      /* In manual sort: prepend before the current first item */
+      const topPos = sortId === 'manual'
+        ? (homeItems[0]?.position ?? 0) - 1
+        : undefined;
       const payload = {
         title: data.title, content: data.content,
         color: folderColor || data.color,
         is_favorite: false,
         folder_id: data.folder_id ? Number(data.folder_id) : (openFolder?.id || null),
         type: data.type === 'voice' ? 'voice' : 'note',
+        ...(topPos !== undefined && { position: topPos }),
       };
       const n = await NoteDB.create(payload);
       setNotes(prev => [n, ...prev]);
