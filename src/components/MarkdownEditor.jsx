@@ -1,6 +1,31 @@
 import { useRef } from 'react';
 import DOMPurify from 'dompurify';
 
+/* ── DOMPurify CSS whitelist ───────────────────────────────────────────────
+   Allow only the CSS properties our own renderMarkdown() actually emits.
+   Any style attribute containing other properties (e.g. injected via a
+   crafted paste) will have those properties stripped before insertion.       */
+const SAFE_CSS_PROPS = new Set([
+  'font-size', 'font-weight', 'margin', 'margin-top', 'margin-bottom',
+  'padding', 'padding-left', 'list-style', 'background', 'border-radius',
+]);
+
+if (typeof window !== 'undefined' && !DOMPurify._notysHookAdded) {
+  DOMPurify.addHook('afterSanitizeAttributes', node => {
+    if (!node.hasAttribute('style')) return;
+    const clean = node.getAttribute('style')
+      .split(';')
+      .filter(decl => {
+        const prop = decl.split(':')[0]?.trim().toLowerCase();
+        return prop && SAFE_CSS_PROPS.has(prop);
+      })
+      .join(';');
+    if (clean) node.setAttribute('style', clean);
+    else node.removeAttribute('style');
+  });
+  DOMPurify._notysHookAdded = true;
+}
+
 const TOOLBAR = [
   { label: 'H1', insert: (t, s, e) => `# ${t.slice(s,e)||'Titre 1'}`, text: 'H1' },
   { label: 'H2', insert: (t, s, e) => `## ${t.slice(s,e)||'Titre 2'}`, text: 'H2' },

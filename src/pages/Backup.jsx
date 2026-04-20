@@ -9,6 +9,31 @@ import DotGrid from '@/components/DotGrid';
 const WAVE = '#ffadad';
 const FG   = '#7f1d1d';
 
+/* ── Field whitelists — only known fields leave or enter the DB ── */
+const NOTE_FIELDS   = ['id', 'title', 'content', 'color', 'is_favorite', 'folder_id',
+                       'type', 'audio_data', 'created_date', 'updated_date',
+                       'last_opened_date', 'position'];
+const FOLDER_FIELDS = ['id', 'name', 'color', 'parent_id', 'created_date', 'updated_date', 'position'];
+const pick = (obj, fields) =>
+  Object.fromEntries(fields.filter(k => k in obj).map(k => [k, obj[k]]));
+
+/* ── Cycle detection — prevents infinite loops on import ── */
+function hasFolderCycle(folders) {
+  const parentMap = Object.fromEntries(
+    folders.map(f => [String(f.id), f.parent_id != null ? String(f.parent_id) : null])
+  );
+  for (const f of folders) {
+    const visited = new Set();
+    let cur = parentMap[String(f.id)];
+    while (cur != null) {
+      if (visited.has(cur)) return true;
+      visited.add(cur);
+      cur = parentMap[cur] ?? null;
+    }
+  }
+  return false;
+}
+
 export default function Backup({ onBack, dark, animated, onToggleAnimations, onImportSuccess }) {
   /* Set status-bar to the page wave color on mount, restore on unmount */
   useEffect(() => {
@@ -29,7 +54,9 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
   const handleExport = async () => {
     setStatus('loading');
     const [notes, folders] = await Promise.all([NoteDB.list(), FolderDB.list()]);
-    const data = { version: 2, app: "Noty's", exported_at: new Date().toISOString(), notes, folders };
+    const safeNotes   = notes.map(n => pick(n, NOTE_FIELDS));
+    const safeFolders = folders.map(f => pick(f, FOLDER_FIELDS));
+    const data = { version: 2, app: "Noty's", exported_at: new Date().toISOString(), notes: safeNotes, folders: safeFolders };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -55,18 +82,20 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
       if (data.version !== undefined && typeof data.version !== 'number') throw new Error('Format invalide : champ "version" incorrect.');
       if (data.folders !== undefined && !Array.isArray(data.folders)) throw new Error('Format invalide : tableau "folders" incorrect.');
       if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
+      if (data.folders && hasFolderCycle(data.folders)) throw new Error('Structure corrompue : cycle détecté dans les dossiers.');
       await db.notes.clear();
       await db.folders.clear();
 
-      /* ── Step 1 : insert folders with parent_id=null, build old→new ID map ── */
+      /* ── Step 1 : insert folders (only whitelisted fields) ── */
       const folderIdMap = {};
       for (const f of (data.folders || [])) {
         const { id: oldId, parent_id, ...rest } = f;
-        const newId = await db.folders.add({ ...rest, parent_id: null });
+        const safeRest = pick(rest, FOLDER_FIELDS.filter(k => k !== 'id' && k !== 'parent_id'));
+        const newId = await db.folders.add({ ...safeRest, parent_id: null });
         if (oldId != null) folderIdMap[oldId] = newId;
       }
 
-      /* ── Step 2 : restore parent_id using the map (sub-folder hierarchy) ── */
+      /* ── Step 2 : restore parent_id using the remapped IDs ── */
       for (const f of (data.folders || [])) {
         if (f.parent_id != null) {
           const newId       = folderIdMap[f.id];
@@ -75,11 +104,12 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         }
       }
 
-      /* ── Step 3 : insert notes with remapped folder_id ── */
+      /* ── Step 3 : insert notes (only whitelisted fields) ── */
       for (const n of (data.notes || [])) {
         const { id, folder_id, ...rest } = n;
+        const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
         const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
-        await db.notes.add({ ...rest, folder_id: newFolderId });
+        await db.notes.add({ ...safeRest, folder_id: newFolderId });
       }
 
       setStatus('success');

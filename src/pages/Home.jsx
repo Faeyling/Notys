@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NoteDB, FolderDB, sortItems } from '@/lib/db';
-import { PAGE_WAVE_COLORS } from '@/lib/constants';
+import { PAGE_WAVE_COLORS, PALETTE } from '@/lib/constants';
 import DotGrid from '@/components/DotGrid';
 import TripleWave from '@/components/TripleWave';
 import GridCard from '@/components/GridCard';
@@ -347,6 +347,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
    * Called from ColorChangeModal (item, color) or NoteDetail.
    */
   const handleColorChange = async (item, color) => {
+    /* Reject any color not in the official palette */
+    if (!PALETTE.some(p => p.bg === color)) return;
     const isFolder = item._type === 'folder';
     if (isFolder) {
       setFolders(prev => prev.map(f => f.id === item.id ? { ...f, color } : f));
