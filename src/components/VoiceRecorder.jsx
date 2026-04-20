@@ -118,8 +118,14 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           return e + 1;
         });
       }, 1000);
-    } catch {
-      setError("Microphone inaccessible. Vérifie les permissions de l'app.");
+    } catch (err) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        setError("Permission micro refusée. Autorise l'accès dans les réglages de ton navigateur.");
+      } else if (err?.name === 'NotFoundError') {
+        setError("Aucun microphone détecté sur cet appareil.");
+      } else {
+        setError("Microphone inaccessible. Vérifie les permissions de l'app.");
+      }
     }
   };
 

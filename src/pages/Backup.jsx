@@ -84,9 +84,9 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
 
       setStatus('success');
       setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setMessage('Fichier invalide ou corrompu.');
+      setMessage(err?.message || 'Fichier invalide ou corrompu.');
     }
     e.target.value = '';
   };
@@ -284,7 +284,15 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations }) {
             </p>
             <p className="text-xs leading-relaxed" style={{ color: dark ? '#ffadad' : FG, opacity: 0.9 }}>
               Tes notes sont stockées <strong>uniquement sur cet appareil</strong>, localement et
-              en sécurité. Aucune donnée n'est envoyée vers un serveur. <br/>Code en <strong>accès libre</strong> : https://github.com/Faeyling/Notys. <br/>Pour <strong>contacter la maman de Noty</strong> : faeyling@proton.me{' '}
+              en sécurité. Aucune donnée n'est envoyée vers un serveur.{' '}
+              <br/>Code en <strong>accès libre</strong> :{' '}
+              <a href="https://github.com/Faeyling/Notys" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                github.com/Faeyling/Notys
+              </a>.{' '}
+              <br/>Pour <strong>contacter la maman de Noty</strong> :{' '}
+              <a href="mailto:faeyling@proton.me" style={{ textDecoration: 'underline' }}>
+                faeyling@proton.me
+              </a>
             </p>
           </div>
         </motion.div>

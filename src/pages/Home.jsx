@@ -26,9 +26,10 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 function shouldShowBackupReminder() {
   if (new Date().getDay() !== 0) return false;
   const key = 'notys-backup-reminder-week';
-  const week = `${new Date().getFullYear()}-W${Math.ceil(new Date().getDate() / 7)}`;
-  if (localStorage.getItem(key) === week) return false;
-  localStorage.setItem(key, week);
+  /* Store the exact YYYY-MM-DD of the Sunday so each Sunday = one reminder max */
+  const today = new Date().toISOString().slice(0, 10);
+  if (localStorage.getItem(key) === today) return false;
+  localStorage.setItem(key, today);
   return true;
 }
 
@@ -425,7 +426,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               <div className="flex flex-col leading-none">
                 <h1
                   className="text-2xl leading-none select-none"
-                  style={{ fontFamily: '"Cherry Bomb One", cursive', color: dark ? '#f0f0f0' : '#111827' }}
+                  style={{ fontFamily: '"Cherry Bomb One", cursive', color: '#111827' }}
                 >
                   Noty's
                 </h1>
