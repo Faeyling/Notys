@@ -70,7 +70,10 @@ export default function MarkdownEditor({ value, onChange, fg }) {
     }
 
     onChange(newVal);
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(cursor, cursor); }, 0);
+    setTimeout(() => {
+      if (!ta.isConnected) return;
+      ta.focus(); ta.setSelectionRange(cursor, cursor);
+    }, 0);
   };
 
   return (

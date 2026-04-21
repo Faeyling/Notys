@@ -143,11 +143,20 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
 
   /* ── Clear ── */
   const handleClear = async () => {
-    await db.notes.clear();
-    await db.folders.clear();
-    setShowClearConfirm(false);
-    setStatus('success');
-    setMessage('Toutes les données ont été effacées.');
+    try {
+      await db.transaction('rw', db.notes, db.folders, async () => {
+        await db.notes.clear();
+        await db.folders.clear();
+      });
+      setShowClearConfirm(false);
+      setStatus('success');
+      setMessage('Toutes les données ont été effacées.');
+      onImportSuccess?.();
+    } catch (err) {
+      setShowClearConfirm(false);
+      setStatus('error');
+      setMessage(err?.message || 'Erreur lors de la suppression des données.');
+    }
   };
 
   return (

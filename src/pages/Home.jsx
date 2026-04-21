@@ -169,13 +169,19 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       if (openFolderRef.current) { setOpenFolder(null); return true; }
       return false;
     });
+    return () => clearTimeout(wiggleTimer.current);
   }, []); /* mount only — refs stay current */
 
   /* Load data — re-runs when dataVersion bumps (e.g. after Backup import) */
   useEffect(() => {
     setLoading(true);
     Promise.all([NoteDB.list(), FolderDB.list()])
-      .then(([n, f]) => { setNotes(n); setFolders(f); })
+      .then(([n, f]) => {
+        /* Filter out any corrupted records (missing id) to prevent crash on .map() */
+        setNotes(n.filter(x => x != null && x.id != null));
+        setFolders(f.filter(x => x != null && x.id != null));
+      })
+      .catch(() => { setNotes([]); setFolders([]); })
       .finally(() => setLoading(false));
     if (dataVersion === 0) {
       setTimeout(() => { if (shouldShowBackupReminder()) setShowBackupReminder(true); }, 2000);
@@ -300,13 +306,20 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     const updated = { ...note, is_favorite: !note.is_favorite };
     setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
     if (openNote?.id === note.id) setOpenNote(updated);
-    await NoteDB.update(note.id, { is_favorite: updated.is_favorite });
+    try {
+      await NoteDB.update(note.id, { is_favorite: updated.is_favorite });
+    } catch {
+      /* Rollback */
+      setNotes(prev => prev.map(n => n.id === note.id ? note : n));
+      if (openNote?.id === note.id) setOpenNote(note);
+    }
   };
 
   const handleSaveNote = async (note, changes) => {
     const updated = { ...note, ...changes };
     setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
     if (openNote?.id === note.id) setOpenNote(updated);
+    /* Let the error propagate — NoteDetail's autoSave catches it to show the error chip */
     await NoteDB.update(note.id, changes);
   };
 
@@ -338,23 +351,39 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   };
 
   const handleRename = async (item, newName) => {
+    const oldName = item.name;
     setFolders(prev => prev.map(f => f.id === item.id ? { ...f, name: newName } : f));
     if (openFolder?.id === item.id) setOpenFolder(f => ({ ...f, name: newName }));
-    await FolderDB.update(item.id, { name: newName });
+    try {
+      await FolderDB.update(item.id, { name: newName });
+    } catch {
+      setFolders(prev => prev.map(f => f.id === item.id ? { ...f, name: oldName } : f));
+      if (openFolder?.id === item.id) setOpenFolder(f => ({ ...f, name: oldName }));
+    }
   };
 
   const handleMove = async (item, targetFolder) => {
     const isFolder = item._type === 'folder';
     const newId = targetFolder?.id ?? null;
     if (isFolder) {
+      const oldParentId = item.parent_id ?? null;
       setFolders(prev => prev.map(f => f.id === item.id ? { ...f, parent_id: newId } : f));
-      await FolderDB.update(item.id, { parent_id: newId });
+      try {
+        await FolderDB.update(item.id, { parent_id: newId });
+      } catch {
+        setFolders(prev => prev.map(f => f.id === item.id ? { ...f, parent_id: oldParentId } : f));
+      }
     } else {
       const folderColor = targetFolder?.color;
       const updated = { ...item, folder_id: newId, ...(folderColor ? { color: folderColor } : {}) };
       setNotes(prev => prev.map(n => n.id === item.id ? updated : n));
       if (openNote?.id === item.id) setOpenNote(updated);
-      await NoteDB.update(item.id, { folder_id: newId, ...(folderColor ? { color: folderColor } : {}) });
+      try {
+        await NoteDB.update(item.id, { folder_id: newId, ...(folderColor ? { color: folderColor } : {}) });
+      } catch {
+        setNotes(prev => prev.map(n => n.id === item.id ? item : n));
+        if (openNote?.id === item.id) setOpenNote(item);
+      }
     }
   };
 
@@ -366,14 +395,24 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     /* Reject any color not in the official palette */
     if (!PALETTE.some(p => p.bg === color)) return;
     const isFolder = item._type === 'folder';
+    const oldColor = item.color;
     if (isFolder) {
       setFolders(prev => prev.map(f => f.id === item.id ? { ...f, color } : f));
-      await FolderDB.update(item.id, { color });
+      try {
+        await FolderDB.update(item.id, { color });
+      } catch {
+        setFolders(prev => prev.map(f => f.id === item.id ? { ...f, color: oldColor } : f));
+      }
     } else {
       const updated = { ...item, color };
       setNotes(prev => prev.map(n => n.id === item.id ? updated : n));
       if (openNote?.id === item.id) setOpenNote(updated);
-      await NoteDB.update(item.id, { color });
+      try {
+        await NoteDB.update(item.id, { color });
+      } catch {
+        setNotes(prev => prev.map(n => n.id === item.id ? { ...n, color: oldColor } : n));
+        if (openNote?.id === item.id) setOpenNote(prev => ({ ...prev, color: oldColor }));
+      }
     }
   };
 

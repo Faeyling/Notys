@@ -90,7 +90,18 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       };
       drawBars();
 
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      let accumulatedBytes = 0;
+      recorder.ondataavailable = e => {
+        if (e.data.size <= 0) return;
+        accumulatedBytes += e.data.size;
+        /* base64 inflates by ~4/3 — stop early if raw bytes already exceed the limit */
+        if (accumulatedBytes > MAX_BASE64_MB * 1_048_576 * 0.75) {
+          clearInterval(timerRef.current);
+          recorderRef.current?.stop();
+        } else {
+          chunksRef.current.push(e.data);
+        }
+      };
       recorder.onstop = async () => {
         cancelAnimationFrame(animFrameRef.current);
         stream.getTracks().forEach(t => t.stop());

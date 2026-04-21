@@ -44,6 +44,7 @@ export default function NoteDetail({
   useEffect(() => {
     return () => {
       clearTimeout(saveTimer.current);
+      clearTimeout(saveStateTimer.current);
       const { note: n, title: t, content: c } = latestRef.current;
       if (n?.id) NoteDB.update(n.id, { title: t, content: c }).catch(() => {});
     };
