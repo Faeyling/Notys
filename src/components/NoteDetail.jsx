@@ -80,8 +80,15 @@ export default function NoteDetail({
   const handleContentChange = (v) => { setContent(v); autoSave(title, v); };
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(`${title}\n\n${content}`)
-      .then(() => { setCopied('ok');    setTimeout(() => setCopied(false), 1500); })
+    const text = `${title}\n\n${content}`;
+    /* Guard: clipboard API can hang on very large strings */
+    if (text.length > 10 * 1024 * 1024) {
+      setCopied('err');
+      setTimeout(() => setCopied(false), 1500);
+      return;
+    }
+    navigator.clipboard?.writeText(text)
+      .then(() => { setCopied('ok');  setTimeout(() => setCopied(false), 1500); })
       .catch(() => { setCopied('err'); setTimeout(() => setCopied(false), 1500); });
   };
 
@@ -299,13 +306,18 @@ export default function NoteDetail({
               )
             ) : (
               content ? (
-                <div
-                  role="article"
-                  aria-label={title || 'Sans titre'}
-                  className="text-sm leading-relaxed"
-                  style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-                />
+                <>
+                  <div
+                    role="article"
+                    aria-label={title || 'Sans titre'}
+                    className="text-sm leading-relaxed"
+                    style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+                  />
+                  <p className="text-xs text-center mt-6 select-none" style={{ color: textFg, opacity: 0.25, fontFamily: 'Quicksand, sans-serif' }}>
+                    ✏️ pour modifier
+                  </p>
+                </>
               ) : (
                 <p className="text-sm" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
                   Note vide. Appuie sur ✏️ pour commencer à écrire.

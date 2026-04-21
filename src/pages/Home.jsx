@@ -592,7 +592,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               {/* Mini Noty + section label — mirrors the Favorites header */}
               <div className="flex items-center gap-2 mb-4">
                 <Mascot variant="spa" size={50} animate={animated} aria-hidden="true" />
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Notes &amp; Dossiers</p>
+                <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>Notes &amp; Dossiers</h2>
               </div>
               {homeItems.length === 0
                 ? <EmptyState tab="home" animated={animated} dark={dark} />
@@ -617,7 +617,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             <motion.div key="fav" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} animate={animated} aria-hidden="true" />
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Favoris</p>
+                <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>Favoris</h2>
               </div>
               {favNotes.length === 0
                 ? <EmptyState tab="fav" animated={animated} dark={dark} />

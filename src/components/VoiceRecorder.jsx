@@ -69,26 +69,30 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       recorderRef.current = recorder;
       chunksRef.current = [];
 
-      /* Visualiser */
-      const ctx = new AudioContext();
-      audioCtxRef.current = ctx;
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      src.connect(analyser);
-      analyserRef.current = analyser;
+      /* Visualiser — gracefully skipped if AudioContext is unavailable (sandboxed contexts) */
+      try {
+        const ctx = new AudioContext();
+        audioCtxRef.current = ctx;
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        src.connect(analyser);
+        analyserRef.current = analyser;
 
-      const drawBars = () => {
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(data);
-        const newBars = Array.from({ length: 24 }, (_, i) => {
-          const v = data[Math.floor(i * data.length / 24)] || 0;
-          return Math.max(4, Math.floor(v / 8));
-        });
-        setBars(newBars);
-        animFrameRef.current = requestAnimationFrame(drawBars);
-      };
-      drawBars();
+        const drawBars = () => {
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(data);
+          const newBars = Array.from({ length: 24 }, (_, i) => {
+            const v = data[Math.floor(i * data.length / 24)] || 0;
+            return Math.max(4, Math.floor(v / 8));
+          });
+          setBars(newBars);
+          animFrameRef.current = requestAnimationFrame(drawBars);
+        };
+        drawBars();
+      } catch {
+        /* AudioContext unavailable — recording still works, bars stay flat */
+      }
 
       let accumulatedBytes = 0;
       recorder.ondataavailable = e => {
