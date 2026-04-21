@@ -79,10 +79,9 @@ export default function NoteDetail({
   const handleContentChange = (v) => { setContent(v); autoSave(title, v); };
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(`${title}\n\n${content}`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
+    navigator.clipboard?.writeText(`${title}\n\n${content}`)
+      .then(() => { setCopied('ok');    setTimeout(() => setCopied(false), 1500); })
+      .catch(() => { setCopied('err'); setTimeout(() => setCopied(false), 1500); });
   };
 
   const togglePlay = () => {
@@ -204,10 +203,15 @@ export default function NoteDetail({
                   <Eye size={15} style={{ color: pal.fg }} />
                 </IconBtn>
               )}
-              <IconBtn onClick={handleCopy} ariaLabel="Copier la note">
-                {copied
-                  ? <Check size={15} style={{ color: pal.fg }} />
-                  : <Copy size={15} style={{ color: pal.fg }} />
+              <IconBtn
+                onClick={handleCopy}
+                ariaLabel={copied === 'err' ? 'Erreur : impossible de copier' : copied ? 'Copié !' : 'Copier la note'}
+              >
+                {copied === 'err'
+                  ? <AlertCircle size={15} style={{ color: pal.fg }} />
+                  : copied
+                    ? <Check size={15} style={{ color: pal.fg }} />
+                    : <Copy size={15} style={{ color: pal.fg }} />
                 }
               </IconBtn>
               {note.type === 'voice' && (
@@ -283,6 +287,8 @@ export default function NoteDetail({
             {editing ? (
               showPreview ? (
                 <div
+                  role="article"
+                  aria-label={`Prévisualisation : ${title || 'Sans titre'}`}
                   className="text-sm leading-relaxed"
                   style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
@@ -293,6 +299,8 @@ export default function NoteDetail({
             ) : (
               content ? (
                 <div
+                  role="article"
+                  aria-label={title || 'Sans titre'}
                   className="text-sm leading-relaxed"
                   style={{ color: textFg, fontFamily: 'Quicksand, sans-serif' }}
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}

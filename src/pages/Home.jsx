@@ -25,12 +25,17 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 /* ── Sunday backup check ──────────────────────────────── */
 function shouldShowBackupReminder() {
   if (new Date().getDay() !== 0) return false;
-  const key = 'notys-backup-reminder-week';
-  /* Store the exact YYYY-MM-DD of the Sunday so each Sunday = one reminder max */
-  const today = new Date().toISOString().slice(0, 10);
-  if (localStorage.getItem(key) === today) return false;
-  localStorage.setItem(key, today);
-  return true;
+  try {
+    const key = 'notys-backup-reminder-week';
+    /* Store the exact YYYY-MM-DD of the Sunday so each Sunday = one reminder max */
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(key) === today) return false;
+    localStorage.setItem(key, today);
+    return true;
+  } catch {
+    /* localStorage unavailable (private mode quota exceeded) — skip reminder */
+    return false;
+  }
 }
 
 /* ── Empty-state mascots ──────────────────────────────── */
@@ -307,18 +312,29 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
 
   const handleDelete = async (item) => {
     const isFolder = item._type === 'folder';
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 }, colors: [item.color, '#fff', '#ffc7ee'] });
+    /* Optimistic UI update first so the card disappears immediately */
     if (isFolder) {
       setFolders(prev => prev.filter(f => f.id !== item.id));
-      await FolderDB.delete(item.id);
-      const orphans = notes.filter(n => n.folder_id === item.id);
-      for (const n of orphans) await NoteDB.update(n.id, { folder_id: null });
-      setNotes(prev => prev.map(n => n.folder_id === item.id ? { ...n, folder_id: null } : n));
     } else {
       setNotes(prev => prev.filter(n => n.id !== item.id));
-      await NoteDB.delete(item.id);
     }
     if (openNote?.id === item.id) setOpenNote(null);
+    try {
+      if (isFolder) {
+        await FolderDB.delete(item.id);
+        const orphans = notes.filter(n => n.folder_id === item.id);
+        for (const n of orphans) await NoteDB.update(n.id, { folder_id: null });
+        setNotes(prev => prev.map(n => n.folder_id === item.id ? { ...n, folder_id: null } : n));
+      } else {
+        await NoteDB.delete(item.id);
+      }
+      /* Confetti only fires after the DB confirms the delete */
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 }, colors: [item.color, '#fff', '#ffc7ee'] });
+    } catch {
+      /* DB failed — restore the item in the UI */
+      if (isFolder) setFolders(prev => [...prev, item]);
+      else setNotes(prev => [...prev, item]);
+    }
   };
 
   const handleRename = async (item, newName) => {
@@ -388,18 +404,22 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       const reordered = [...homeItems];
       const [moved] = reordered.splice(source.index, 1);
       reordered.splice(destination.index, 0, moved);
-      /* Persist position index to DB + switch to manual sort so order survives reload */
-      for (let i = 0; i < reordered.length; i++) {
-        const it = reordered[i];
-        if (it._type === 'folder') {
-          setFolders(prev => prev.map(f => f.id === it.id ? { ...f, position: i } : f));
-          FolderDB.update(it.id, { position: i }).catch(() => {});
-        } else {
-          setNotes(prev => prev.map(n => n.id === it.id ? { ...n, position: i } : n));
-          NoteDB.update(it.id, { position: i }).catch(() => {});
-        }
-      }
+      /* Optimistic UI update */
       setSortId('manual');
+      reordered.forEach((it, i) => {
+        if (it._type === 'folder') setFolders(prev => prev.map(f => f.id === it.id ? { ...f, position: i } : f));
+        else setNotes(prev => prev.map(n => n.id === it.id ? { ...n, position: i } : n));
+      });
+      /* Persist to DB — if any write fails, reload from DB to restore consistent state */
+      const writes = reordered.map((it, i) =>
+        it._type === 'folder'
+          ? FolderDB.update(it.id, { position: i })
+          : NoteDB.update(it.id, { position: i })
+      );
+      Promise.all(writes).catch(async () => {
+        const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
+        setNotes(n); setFolders(f);
+      });
     }
   };
 
@@ -847,6 +867,15 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           onClose={() => setVoiceTarget(null)}
         />
       )}
+
+      {/* Screen-reader announcement when the active tab changes */}
+      <span
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {tab === 'home' ? 'Accueil' : tab === 'fav' ? 'Favoris' : tab === 'search' ? 'Recherche' : 'Sauvegarde'}
+      </span>
     </div>
   );
 }

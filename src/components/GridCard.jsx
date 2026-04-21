@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, Star, Trash2, Palette, Play, Mic, Edit2 } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 
+/* Module-level singleton: only one audio plays at a time across all cards */
+let _activeAudio = null;
+
 export default function GridCard({
   item, type, onOpen, onToggleStar, onDelete, onColorChange, onRename, isDragging, dark,
 }) {
@@ -42,8 +45,16 @@ export default function GridCard({
   const handlePlayAudio = (e) => {
     e.stopPropagation();
     if (!item.audio_data) return;
+    /* Stop any previously playing card audio */
+    if (_activeAudio) {
+      _activeAudio.pause();
+      _activeAudio.currentTime = 0;
+      _activeAudio = null;
+    }
     const audio = new Audio(item.audio_data);
+    _activeAudio = audio;
     audio.play();
+    audio.onended = () => { _activeAudio = null; };
   };
 
   const confirmDelete = (e) => {

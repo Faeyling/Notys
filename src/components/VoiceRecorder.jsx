@@ -127,11 +127,11 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       }, 1000);
     } catch (err) {
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-        setError("Permission micro refusée. Autorise l'accès dans les réglages de ton navigateur.");
+        setError("Permission micro refusée. Appuie sur l'icône 🔒 dans la barre d'adresse → Autorisations → Microphone → Autoriser, puis recharge la page.");
       } else if (err?.name === 'NotFoundError') {
-        setError("Aucun microphone détecté sur cet appareil.");
+        setError("Aucun microphone détecté. Branche un micro ou vérifie que ton appareil en possède un.");
       } else {
-        setError("Microphone inaccessible. Vérifie les permissions de l'app.");
+        setError("Microphone inaccessible. Ferme les autres apps qui l'utilisent et réessaie.");
       }
     }
   };
@@ -227,7 +227,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           <p
             className="text-2xl font-bold mb-6"
             style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
-            aria-live="polite"
+            aria-live="off"
             aria-label={`Durée : ${fmt(elapsed)}`}
           >
             {fmt(elapsed)}

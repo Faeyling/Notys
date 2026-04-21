@@ -84,7 +84,7 @@ export default function MarkdownEditor({ value, onChange, fg }) {
             onTouchStart={e => { e.preventDefault(); apply(tool); }}
             title={tool.label}
             aria-label={tool.label}
-            className="px-3 py-2 rounded-lg text-xs font-bold transition-all hover:opacity-70 active:scale-90 select-none min-w-[40px]"
+            className="px-3 py-2 rounded-lg text-xs font-bold transition-all hover:opacity-70 active:scale-90 select-none min-w-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-1"
             style={{
               color: fg,
               background: `${fg}18`,

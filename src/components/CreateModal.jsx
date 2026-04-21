@@ -20,6 +20,7 @@ export default function CreateModal({
   const [color, setColor]       = useState(defaultColor || DEFAULT_COLOR);
   const [folderId, setFolderId] = useState(parentFolderId || '');
   const [attempted, setAttempted] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const modalRef  = useRef(null);
   const titleRef  = useRef(null);
@@ -51,8 +52,9 @@ export default function CreateModal({
 
   const handleSave = () => {
     if (!title.trim()) { setAttempted(true); titleRef.current?.focus(); return; }
+    setSaved(true);
     onSave({ title: title.trim(), content, color, is_favorite: false, folder_id: folderId || null, type });
-    onClose();
+    setTimeout(() => { setSaved(false); onClose(); }, 600);
   };
 
   if (!show) return null;
@@ -218,19 +220,19 @@ export default function CreateModal({
 
             <motion.button
               onClick={handleSave}
-              disabled={!title.trim()}
-              whileHover={{ scale: title.trim() ? 1.02 : 1 }}
-              whileTap={{ scale: title.trim() ? 0.97 : 1 }}
+              disabled={!title.trim() || saved}
+              whileHover={{ scale: title.trim() && !saved ? 1.02 : 1 }}
+              whileTap={{ scale: title.trim() && !saved ? 0.97 : 1 }}
               className="w-full py-3.5 rounded-2xl font-bold text-sm mt-1"
               style={{
-                background: title.trim() ? pal.bg : '#F3F4F6',
-                color: title.trim() ? pal.fg : '#9CA3AF',
+                background: saved ? '#22c55e' : title.trim() ? pal.bg : '#F3F4F6',
+                color: saved ? 'white' : title.trim() ? pal.fg : '#9CA3AF',
                 fontFamily: 'Quicksand, sans-serif',
-                boxShadow: title.trim() ? `0 4px 20px ${pal.bg}88` : 'none',
+                boxShadow: saved ? '0 4px 20px #22c55e88' : title.trim() ? `0 4px 20px ${pal.bg}88` : 'none',
                 transition: 'all 0.2s',
               }}
             >
-              Créer ✨
+              {saved ? '✅ Créé !' : 'Créer ✨'}
             </motion.button>
           </div>
         </motion.div>
