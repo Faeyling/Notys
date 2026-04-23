@@ -5,7 +5,7 @@ import {
   HelpCircle, Moon, Sun, SlidersHorizontal, Folder, FileText, Mic, X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { NoteDB, FolderDB, sortItems } from '@/lib/db';
+import { db, NoteDB, FolderDB, sortItems } from '@/lib/db';
 import { PAGE_WAVE_COLORS, PALETTE } from '@/lib/constants';
 import DotGrid from '@/components/DotGrid';
 import TripleWave from '@/components/TripleWave';
@@ -21,6 +21,24 @@ import VoiceRecorder from '@/components/VoiceRecorder';
 import Mascot from '@/components/Mascot';
 import useOrientation from '@/hooks/useOrientation';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
+/* ── Cycle detection for folder moves ─────────────────── *
+   Returns the Set of all descendant folder IDs of `folderId`.
+   Used to prevent A→B→A circular parent chains.              */
+function getAllDescendantIds(folderId, allFolders) {
+  const result = new Set();
+  const queue  = [folderId];
+  while (queue.length) {
+    const id = queue.shift();
+    for (const f of allFolders) {
+      if (f.parent_id === id && !result.has(f.id)) {
+        result.add(f.id);
+        queue.push(f.id);
+      }
+    }
+  }
+  return result;
+}
 
 /* ── Sunday backup check ──────────────────────────────── */
 function shouldShowBackupReminder() {
@@ -130,6 +148,9 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
   );
 }
 
+/* Maximum search results rendered at once — prevents UI freeze on large datasets */
+const MAX_SEARCH_RESULTS = 120;
+
 /* ── Main App ─────────────────────────────────────────── */
 export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBack, dataVersion = 0 }) {
   const landscape = useOrientation();
@@ -138,10 +159,15 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const [notes, setNotes]       = useState([]);
   const [folders, setFolders]   = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [sortId, setSortId]     = useState(() => localStorage.getItem('notys-sort') || 'date_desc');
+  const [sortId, setSortId]     = useState(() => {
+    try { return localStorage.getItem('notys-sort') || 'date_desc'; }
+    catch { return 'date_desc'; } /* localStorage unavailable in some private modes */
+  });
   const [showSort, setShowSort] = useState(false);
   const [searchQ, setSearchQ]   = useState('');
 
+  const [dragError, setDragError]         = useState(false);
+  const [quotaError, setQuotaError]       = useState(false);
   const [showCreate, setShowCreate]       = useState(false);
   const [createType, setCreateType]       = useState('note');
   const [openNote, setOpenNote]           = useState(null);
@@ -152,7 +178,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const [showBackupReminder, setShowBackupReminder] = useState(false);
   const [showFab, setShowFab]             = useState(false);
 
-  const scrollRef   = useRef(null);
+  const scrollRef       = useRef(null);
+  const deletingIdsRef  = useRef(new Set());
   const [scrolled, setScrolled] = useState(false);
   const [wiggle, setWiggle]     = useState(false);
   const wiggleTimer             = useRef(null);
@@ -172,24 +199,31 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     return () => clearTimeout(wiggleTimer.current);
   }, []); /* mount only — refs stay current */
 
-  /* Load data — re-runs when dataVersion bumps (e.g. after Backup import) */
+  /* Load data — re-runs when dataVersion bumps (e.g. after Backup import).
+     The `cancelled` flag guards against stale promise resolutions when the
+     component remounts or dataVersion changes before the previous fetch ends. */
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     Promise.all([NoteDB.list(), FolderDB.list()])
       .then(([n, f]) => {
+        if (cancelled) return;
         /* Filter out any corrupted records (missing id) to prevent crash on .map() */
         setNotes(n.filter(x => x != null && x.id != null));
         setFolders(f.filter(x => x != null && x.id != null));
       })
-      .catch(() => { setNotes([]); setFolders([]); })
-      .finally(() => setLoading(false));
+      .catch(() => { if (!cancelled) { setNotes([]); setFolders([]); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
     if (dataVersion === 0) {
       setTimeout(() => { if (shouldShowBackupReminder()) setShowBackupReminder(true); }, 2000);
     }
+    return () => { cancelled = true; };
   }, [dataVersion]);
 
   /* Sort persistence */
-  useEffect(() => { localStorage.setItem('notys-sort', sortId); }, [sortId]);
+  useEffect(() => {
+    try { localStorage.setItem('notys-sort', sortId); } catch { /* quota or security */ }
+  }, [sortId]);
 
   /* Sync browser/OS status-bar color with the active tab wave color */
   useEffect(() => {
@@ -198,10 +232,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     if (meta) meta.setAttribute('content', color);
   }, [tab]);
 
-  /* Scroll handler */
+  /* Scroll handler — hysteresis prevents jitter when content barely fills
+     the page: compact header at y>40, expand back only below y<15 */
   const onScroll = useCallback((e) => {
     const y = e.currentTarget.scrollTop;
-    setScrolled(y > 40);
+    setScrolled(prev => (prev ? y > 15 : y > 40));
     setWiggle(true);
     clearTimeout(wiggleTimer.current);
     wiggleTimer.current = setTimeout(() => setWiggle(false), 400);
@@ -231,21 +266,22 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     _type: 'folder',
   })), [folders, noteCountByFolder, folderCountByParent]);
 
-  /* Derived views */
-  const rootNotes   = notes.filter(n => !n.folder_id);
-  const rootFolders = foldersWithCount.filter(f => !f.parent_id);
-  const homeItems   = sortItems(
+  /* Derived views — memoised so scroll/wiggle/FAB state changes don't
+     trigger unnecessary re-filtering of potentially large note arrays */
+  const rootNotes = useMemo(() => notes.filter(n => !n.folder_id), [notes]);
+  const rootFolders = useMemo(() => foldersWithCount.filter(f => !f.parent_id), [foldersWithCount]);
+  const homeItems = useMemo(() => sortItems(
     [...rootFolders, ...rootNotes.map(n => ({ ...n, _type: 'note' }))],
     sortId,
-  );
-  const favNotes = sortItems(
+  ), [rootFolders, rootNotes, sortId]);
+  const favNotes = useMemo(() => sortItems(
     notes.filter(n => n.is_favorite).map(n => ({ ...n, _type: 'note' })),
     sortId,
-  );
-  const searchResults = (() => {
+  ), [notes, sortId]);
+  const searchResults = useMemo(() => {
     const q = searchQ.trim().toLowerCase();
     if (!q) return [];
-    return [
+    const all = [
       /* Folders matching by name */
       ...foldersWithCount.filter(f => f.name?.toLowerCase().includes(q)),
       /* Notes matching by title or content */
@@ -256,49 +292,79 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         )
         .map(n => ({ ...n, _type: 'note' })),
     ];
-  })();
+    return all.slice(0, MAX_SEARCH_RESULTS);
+  }, [searchQ, foldersWithCount, notes]);
+
+  /* Total unsliced count — used to display the "X autres résultats" badge */
+  const searchTotal = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return 0;
+    return (
+      foldersWithCount.filter(f => f.name?.toLowerCase().includes(q)).length +
+      notes.filter(n =>
+        n.title?.toLowerCase().includes(q) ||
+        n.content?.toLowerCase().includes(q)
+      ).length
+    );
+  }, [searchQ, foldersWithCount, notes]);
 
   /* Folder layer items */
-  const folderNotes = openFolder
+  const folderNotes = useMemo(() => openFolder
     ? notes.filter(n => n.folder_id === openFolder.id).map(n => ({ ...n, _type: 'note' }))
-    : [];
-  const subFolders = openFolder
+    : [], [openFolder?.id, notes]);
+  const subFolders = useMemo(() => openFolder
     ? foldersWithCount.filter(f => f.parent_id === openFolder.id)
-    : [];
-  const folderItems = sortItems([...subFolders, ...folderNotes], sortId);
+    : [], [openFolder?.id, foldersWithCount]);
+  const folderItems = useMemo(() => sortItems([...subFolders, ...folderNotes], sortId),
+    [subFolders, folderNotes, sortId]);
+
+  /* ── Quota error helper ── */
+  const showQuotaError = () => {
+    setQuotaError(true);
+    setTimeout(() => setQuotaError(false), 4000);
+  };
 
   /* ── Actions ── */
   const handleSave = async (data) => {
-    if (data.type === 'folder') {
-      /* In manual sort: prepend before the current first item */
-      const topPos = sortId === 'manual'
-        ? (homeItems[0]?.position ?? 0) - 1
-        : undefined;
-      const payload = {
-        name: data.title, color: data.color, parent_id: openFolder?.id || null,
-        ...(topPos !== undefined && { position: topPos }),
-      };
-      const f = await FolderDB.create(payload);
-      setFolders(prev => [f, ...prev]);
-    } else {
-      const folderColor = data.folder_id
-        ? folders.find(f => f.id === Number(data.folder_id))?.color
-        : null;
-      /* In manual sort: prepend before the current first item */
-      const topPos = sortId === 'manual'
-        ? (homeItems[0]?.position ?? 0) - 1
-        : undefined;
-      const payload = {
-        title: data.title, content: data.content,
-        color: folderColor || data.color,
-        is_favorite: false,
-        folder_id: data.folder_id ? Number(data.folder_id) : (openFolder?.id || null),
-        type: data.type === 'voice' ? 'voice' : 'note',
-        ...(topPos !== undefined && { position: topPos }),
-      };
-      const n = await NoteDB.create(payload);
-      setNotes(prev => [n, ...prev]);
-      if (data.type === 'voice') setVoiceTarget(n);
+    try {
+      if (data.type === 'folder') {
+        /* In manual sort: prepend before the current first item */
+        const topPos = sortId === 'manual'
+          ? (homeItems[0]?.position ?? 0) - 1
+          : undefined;
+        const payload = {
+          name: data.title, color: data.color, parent_id: openFolder?.id || null,
+          ...(topPos !== undefined && { position: topPos }),
+        };
+        const f = await FolderDB.create(payload);
+        setFolders(prev => [f, ...prev]);
+      } else {
+        const folderColor = data.folder_id
+          ? folders.find(f => f.id === Number(data.folder_id))?.color
+          : null;
+        /* In manual sort: prepend before the current first item */
+        const topPos = sortId === 'manual'
+          ? (homeItems[0]?.position ?? 0) - 1
+          : undefined;
+        const payload = {
+          title: data.title, content: data.content,
+          color: folderColor || data.color,
+          is_favorite: false,
+          folder_id: data.folder_id ? Number(data.folder_id) : (openFolder?.id || null),
+          type: data.type === 'voice' ? 'voice' : 'note',
+          ...(topPos !== undefined && { position: topPos }),
+        };
+        const n = await NoteDB.create(payload);
+        setNotes(prev => [n, ...prev]);
+        if (data.type === 'voice') setVoiceTarget(n);
+      }
+    } catch (err) {
+      /* IndexedDB storage full — show a user-facing toast and re-throw so CreateModal
+         can reset its success state (it now awaits onSave). */
+      if (err?.name === 'QuotaExceededError' || err?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        showQuotaError();
+      }
+      throw err;
     }
   };
 
@@ -324,6 +390,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   };
 
   const handleDelete = async (item) => {
+    /* Prevent a double-tap/double-click from firing two concurrent deletes */
+    const key = `${item._type}-${item.id}`;
+    if (deletingIdsRef.current.has(key)) return;
+    deletingIdsRef.current.add(key);
+
     const isFolder = item._type === 'folder';
     /* Optimistic UI update first so the card disappears immediately */
     if (isFolder) {
@@ -334,19 +405,28 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     if (openNote?.id === item.id) setOpenNote(null);
     try {
       if (isFolder) {
-        await FolderDB.delete(item.id);
+        /* Identify orphans before the transaction so we can update UI after */
         const orphans = notes.filter(n => n.folder_id === item.id);
-        for (const n of orphans) await NoteDB.update(n.id, { folder_id: null });
-        setNotes(prev => prev.map(n => n.folder_id === item.id ? { ...n, folder_id: null } : n));
+        /* Atomic transaction: if any step fails, IndexedDB rolls back entirely */
+        await db.transaction('rw', db.notes, db.folders, async () => {
+          await db.folders.delete(item.id);
+          for (const n of orphans) await db.notes.update(n.id, { folder_id: null });
+        });
+        /* Only update notes in UI after the DB transaction commits successfully */
+        setNotes(prev => prev.map(n =>
+          orphans.some(o => o.id === n.id) ? { ...n, folder_id: null } : n
+        ));
       } else {
         await NoteDB.delete(item.id);
       }
       /* Confetti only fires after the DB confirms the delete */
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 }, colors: [item.color, '#fff', '#ffc7ee'] });
     } catch {
-      /* DB failed — restore the item in the UI */
+      /* DB failed — restore the item in the UI (notes were never changed) */
       if (isFolder) setFolders(prev => [...prev, item]);
       else setNotes(prev => [...prev, item]);
+    } finally {
+      deletingIdsRef.current.delete(key);
     }
   };
 
@@ -365,6 +445,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const handleMove = async (item, targetFolder) => {
     const isFolder = item._type === 'folder';
     const newId = targetFolder?.id ?? null;
+    if (isFolder && targetFolder) {
+      /* Guard: refuse to move a folder into itself or into one of its descendants */
+      const descendants = getAllDescendantIds(item.id, folders);
+      if (targetFolder.id === item.id || descendants.has(targetFolder.id)) return;
+    }
     if (isFolder) {
       const oldParentId = item.parent_id ?? null;
       setFolders(prev => prev.map(f => f.id === item.id ? { ...f, parent_id: newId } : f));
@@ -456,8 +541,12 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           : NoteDB.update(it.id, { position: i })
       );
       Promise.all(writes).catch(async () => {
+        /* DB writes failed — reload authoritative state and notify user */
+        setDragError(true);
+        setTimeout(() => setDragError(false), 3000);
         const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
-        setNotes(n); setFolders(f);
+        setNotes(n.filter(x => x != null && x.id != null));
+        setFolders(f.filter(x => x != null && x.id != null));
       });
     }
   };
@@ -472,13 +561,22 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center" style={{ height: '100dvh', background: pageBg }}>
+      <div
+        className="flex flex-col items-center justify-center gap-3"
+        style={{ height: '100dvh', background: pageBg }}
+        role="status"
+        aria-label="Chargement des notes…"
+      >
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           className="w-8 h-8 rounded-full border-4"
           style={{ borderColor: '#FFC7EE', borderTopColor: '#e879a0' }}
+          aria-hidden="true"
         />
+        <p className="text-sm font-semibold" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
+          Chargement…
+        </p>
       </div>
     );
   }
@@ -674,21 +772,31 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 ? <EmptyState tab="search" hasQuery animated={animated} dark={dark} />
                 : !searchQ
                   ? <EmptyState tab="search" animated={animated} dark={dark} />
-                  : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                      {searchResults.map(item => (
-                        <GridCard
-                          key={`${item._type}-${item.id}`}
-                          item={item}
-                          type={item._type}
-                          onOpen={item._type === 'folder' ? f => setOpenFolder(f) : openNoteDetail}
-                          onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
-                          onDelete={handleDelete}
-                          onColorChange={i => setColorTarget(i)}
-                          onRename={handleRename}
-                          dark={dark}
-                        />
-                      ))}
-                    </div>
+                  : <>
+                      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                        {searchResults.map(item => (
+                          <GridCard
+                            key={`${item._type}-${item.id}`}
+                            item={item}
+                            type={item._type}
+                            onOpen={item._type === 'folder' ? f => setOpenFolder(f) : openNoteDetail}
+                            onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
+                            onDelete={handleDelete}
+                            onColorChange={i => setColorTarget(i)}
+                            onRename={handleRename}
+                            dark={dark}
+                          />
+                        ))}
+                      </div>
+                      {searchTotal > MAX_SEARCH_RESULTS && (
+                        <p
+                          className="text-xs text-center pt-2"
+                          style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}
+                        >
+                          {searchTotal - MAX_SEARCH_RESULTS} autre{searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} résultat{searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} — affine ta recherche pour les voir
+                        </p>
+                      )}
+                    </>
               }
             </motion.div>
           )}
@@ -756,7 +864,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                     className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg"
                     style={{ background: color }}
                   >
-                    <Icon size={18} style={{ color: fg }} />
+                    <Icon size={18} style={{ color: fg }} aria-hidden="true" />
                   </motion.button>
                 </motion.div>
               ))}
@@ -864,37 +972,47 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         onGoBackup={() => { setShowBackupReminder(false); onGoBackup?.(); setTab('backup'); }}
       />
 
-      {/* Note detail layer */}
-      {openNote && (
-        <NoteDetail
-          note={openNote}
-          folders={folders}
-          dark={dark}
-          onClose={() => setOpenNote(null)}
-          onToggleStar={handleToggleStar}
-          onDelete={handleDelete}
-          onSave={handleSaveNote}
-          onColorChange={handleColorChange}
-        />
-      )}
+      {/* Note detail layer — key isolates each note instance so its auto-save
+          timer and state never bleed into the next note (race condition fix).
+          AnimatePresence at this level also drives the exit slide animation. */}
+      <AnimatePresence>
+        {openNote && (
+          <NoteDetail
+            key={openNote.id}
+            note={openNote}
+            folders={folders}
+            dark={dark}
+            onClose={() => setOpenNote(null)}
+            onToggleStar={handleToggleStar}
+            onDelete={handleDelete}
+            onSave={handleSaveNote}
+            onColorChange={handleColorChange}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Folder layer */}
-      {openFolder && (
-        <FolderLayer
-          folder={openFolder}
-          items={folderItems}
-          folders={folders}
-          onClose={() => setOpenFolder(null)}
-          onOpenNote={openNoteDetail}
-          onOpenFolder={f => setOpenFolder(f)}
-          onToggleStar={handleToggleStar}
-          onDelete={handleDelete}
-          onColorChange={item => setColorTarget(item)}
-          onRename={handleRename}
-          onDragEnd={handleDragEnd}
-          dark={dark}
-        />
-      )}
+      {/* Folder layer — key isolates each folder instance so AnimatePresence
+          can play exit/enter animations without prop contamination between
+          rapid folder switches (race condition fix). */}
+      <AnimatePresence>
+        {openFolder && (
+          <FolderLayer
+            key={openFolder.id}
+            folder={openFolder}
+            items={folderItems}
+            folders={folders}
+            onClose={() => setOpenFolder(null)}
+            onOpenNote={openNoteDetail}
+            onOpenFolder={f => setOpenFolder(f)}
+            onToggleStar={handleToggleStar}
+            onDelete={handleDelete}
+            onColorChange={item => setColorTarget(item)}
+            onRename={handleRename}
+            onDragEnd={handleDragEnd}
+            dark={dark}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Voice recorder for new voice notes */}
       {voiceTarget && (
@@ -908,13 +1026,64 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       )}
 
       {/* Screen-reader announcement when the active tab changes */}
-      <span
-        className="sr-only"
-        aria-live="polite"
-        aria-atomic="true"
-      >
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
         {tab === 'home' ? 'Accueil' : tab === 'fav' ? 'Favoris' : tab === 'search' ? 'Recherche' : 'Sauvegarde'}
       </span>
+
+      {/* Screen-reader announcement when initial data finishes loading */}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {!loading && notes.length > 0
+          ? `${notes.length} note${notes.length > 1 ? 's' : ''} et ${folders.length} dossier${folders.length > 1 ? 's' : ''} chargés`
+          : ''}
+      </span>
+
+      {/* Drag-and-drop error toast */}
+      <AnimatePresence>
+        {dragError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
+            style={{
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(8px)',
+              color: 'white',
+              fontFamily: 'Quicksand, sans-serif',
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}
+            role="alert"
+          >
+            ↩️ Ordre non sauvegardé — réessaie
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Storage-full error toast */}
+      <AnimatePresence>
+        {quotaError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
+            style={{
+              background: 'rgba(220,38,38,0.85)',
+              backdropFilter: 'blur(8px)',
+              color: 'white',
+              fontFamily: 'Quicksand, sans-serif',
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}
+            role="alert"
+          >
+            💾 Stockage plein — libère de l'espace et réessaie
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

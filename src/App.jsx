@@ -22,8 +22,12 @@ export default function App() {
   const [dark, setDark]         = useDarkMode();
   const [dataVersion, setDataVersion] = useState(0); // bumped after import to reload Home
   const [animated, setAnimated] = useState(() => {
-    const s = localStorage.getItem('notys-animations');
-    return s === null ? true : s === 'true';
+    try {
+      const s = localStorage.getItem('notys-animations');
+      return s === null ? true : s === 'true';
+    } catch {
+      return true; /* localStorage blocked — default to animations on */
+    }
   });
 
   /* ── Back-button interception ─────────────────────────── */
@@ -51,7 +55,7 @@ export default function App() {
 
   const handleToggleAnimations = (v) => {
     setAnimated(v);
-    localStorage.setItem('notys-animations', String(v));
+    try { localStorage.setItem('notys-animations', String(v)); } catch { /* quota or security */ }
   };
 
   return (

@@ -37,24 +37,39 @@ export default function CreateModal({
     }
   }, [show, parentFolderId, defaultColor, defaultType]);
 
+  /* Focus trap — re-queries the DOM on every Tab press so dynamically
+     rendered elements (textarea, select) are always picked up correctly */
   const trapFocus = (e) => {
     if (e.key !== 'Tab') return;
-    const focusable = modalRef.current?.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (!focusable?.length) return;
+    const focusable = Array.from(
+      modalRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ) || []
+    );
+    if (!focusable.length) return;
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault(); last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault(); first.focus();
+    const last  = focusable[focusable.length - 1];
+    const idx   = focusable.indexOf(document.activeElement);
+    if (e.shiftKey) {
+      /* Shift+Tab: wrap to last, or if focus escaped the modal → last */
+      if (idx <= 0) { e.preventDefault(); last.focus(); }
+    } else {
+      /* Tab: wrap to first, or if focus escaped the modal → first */
+      if (idx === -1 || idx >= focusable.length - 1) { e.preventDefault(); first.focus(); }
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) { setAttempted(true); titleRef.current?.focus(); return; }
     setSaved(true);
-    onSave({ title: title.trim(), content, color, is_favorite: false, folder_id: folderId || null, type });
-    setTimeout(() => { setSaved(false); onClose(); }, 600);
+    try {
+      await onSave({ title: title.trim(), content, color, is_favorite: false, folder_id: folderId || null, type });
+      setTimeout(() => { setSaved(false); onClose(); }, 600);
+    } catch {
+      /* DB write failed (e.g. quota exceeded) — reset the saved indicator so
+         the user can retry, and let the Home.jsx toast explain the error */
+      setSaved(false);
+    }
   };
 
   if (!show) return null;

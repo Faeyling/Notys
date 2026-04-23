@@ -13,7 +13,19 @@ export default function GridCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [renaming, setRenaming]   = useState(false);
   const [renameVal, setRenameVal] = useState('');
-  const renameRef = useRef(null);
+  const renameRef  = useRef(null);
+  /* Tracks the Audio instance started by THIS card so we can stop it on unmount */
+  const myAudioRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (myAudioRef.current) {
+        myAudioRef.current.pause();
+        if (_activeAudio === myAudioRef.current) _activeAudio = null;
+        myAudioRef.current = null;
+      }
+    };
+  }, []);
 
   /* Palette — in dark mode notes blend with the page background */
   const pal        = PALETTE.find(p => p.bg === item.color) || PALETTE[8];
@@ -47,14 +59,23 @@ export default function GridCard({
     if (!item.audio_data) return;
     /* Stop any previously playing card audio */
     if (_activeAudio) {
-      _activeAudio.pause();
-      _activeAudio.currentTime = 0;
+      try { _activeAudio.pause(); _activeAudio.currentTime = 0; } catch { /* already GC'd */ }
       _activeAudio = null;
     }
-    const audio = new Audio(item.audio_data);
-    _activeAudio = audio;
-    audio.play();
-    audio.onended = () => { _activeAudio = null; };
+    /* Reuse existing instance to avoid re-allocating the full dataURI in RAM */
+    if (!myAudioRef.current) {
+      myAudioRef.current = new Audio(item.audio_data);
+      myAudioRef.current.onended = () => {
+        _activeAudio = null;
+        myAudioRef.current = null;
+      };
+    }
+    _activeAudio = myAudioRef.current;
+    myAudioRef.current.play().catch(() => {
+      /* Autoplay policy or codec failure — release the singleton */
+      _activeAudio = null;
+      myAudioRef.current = null;
+    });
   };
 
   const confirmDelete = (e) => {
@@ -184,6 +205,7 @@ export default function GridCard({
                 onClick={handlePlayAudio}
                 onMouseDown={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
+                aria-label="Écouter la note vocale"
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
                 style={{ background: 'rgba(0,0,0,0.12)' }}
               >

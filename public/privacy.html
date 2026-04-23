@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Politique de confidentialité — Noty's</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1f2937;
+      background: #fafafa;
+      padding: 2rem 1rem;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.75rem; font-weight: 800; color: #111827; margin-bottom: 0.25rem; }
+    .subtitle { color: #6b7280; font-size: 0.9rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 2rem 0 0.5rem; }
+    p  { margin-bottom: 0.75rem; color: #374151; }
+    ul { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.3rem; }
+    a  { color: #e879a0; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      background: #fce7f3;
+      color: #9d174d;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Politique de confidentialité</h1>
+  <p class="subtitle">Application Noty's · Dernière mise à jour : avril 2026</p>
+
+  <h2>1. Présentation</h2>
+  <p>
+    Noty's est une application de prise de notes locale (<em>offline-first</em>).
+    Elle ne collecte, ne transmet et ne vend aucune donnée personnelle à des tiers.
+  </p>
+
+  <h2>2. Données collectées <span class="badge">Aucune</span></h2>
+  <p>
+    Noty's ne collecte <strong>aucune donnée personnelle</strong>.
+    L'application fonctionne entièrement sur votre appareil :
+  </p>
+  <ul>
+    <li>Toutes vos notes, dossiers et notes vocales sont stockés localement dans <strong>IndexedDB</strong> (base de données embarquée dans votre navigateur / appareil).</li>
+    <li>Aucun compte utilisateur n'est requis.</li>
+    <li>Aucune connexion à un serveur externe n'est effectuée.</li>
+    <li>Aucun cookie de suivi, aucun pixel de tracking, aucune analytics ne sont utilisés.</li>
+  </ul>
+
+  <h2>3. Stockage local</h2>
+  <p>
+    Les seules données persistées sur votre appareil sont :
+  </p>
+  <ul>
+    <li>Vos notes (titre, contenu texte, couleur, statut favori).</li>
+    <li>Vos dossiers (nom, couleur).</li>
+    <li>Vos notes vocales (données audio encodées en base64, stockées localement).</li>
+    <li>Vos préférences d'affichage (thème clair/sombre, ordre de tri) via <code>localStorage</code>.</li>
+  </ul>
+  <p>
+    Ces données restent <strong>exclusivement sur votre appareil</strong> et ne quittent jamais votre appareil,
+    sauf si vous exportez vous-même une sauvegarde via la fonctionnalité intégrée.
+  </p>
+
+  <h2>4. Microphone</h2>
+  <p>
+    L'accès au microphone est demandé <strong>uniquement</strong> si vous créez une note vocale.
+    L'enregistrement audio est traité localement et stocké dans IndexedDB sur votre appareil.
+    Aucun audio n'est transmis à un serveur.
+  </p>
+
+  <h2>5. Fonctionnement hors connexion</h2>
+  <p>
+    Noty's est une Progressive Web App (PWA). Un Service Worker met en cache les fichiers
+    de l'application pour un fonctionnement hors connexion complet. Ce cache est strictement
+    limité aux ressources de l'application (HTML, CSS, JavaScript, icônes).
+  </p>
+
+  <h2>6. Partage de données</h2>
+  <p>
+    Noty's ne partage aucune donnée avec des tiers. Il n'existe aucune intégration
+    publicitaire, analytique ou de réseaux sociaux.
+  </p>
+
+  <h2>7. Droits de l'utilisateur</h2>
+  <p>
+    Vos données vous appartiennent intégralement. Vous pouvez à tout moment :
+  </p>
+  <ul>
+    <li>Exporter toutes vos notes via la section <strong>Sauvegarde</strong> de l'application.</li>
+    <li>Supprimer toutes vos données en effaçant les données du site dans les paramètres de votre navigateur.</li>
+  </ul>
+
+  <h2>8. Sécurité</h2>
+  <p>
+    Les données étant stockées exclusivement sur votre appareil, leur sécurité dépend
+    de la sécurité de votre appareil (verrouillage d'écran, chiffrement du stockage).
+    Noty's applique une politique de sécurité du contenu (CSP) stricte pour prévenir
+    les injections de scripts.
+  </p>
+
+  <h2>9. Enfants</h2>
+  <p>
+    Noty's ne collectant aucune donnée, l'application peut être utilisée sans restriction d'âge
+    du point de vue de la protection des données.
+  </p>
+
+  <h2>10. Modifications</h2>
+  <p>
+    Toute modification de cette politique sera publiée sur cette page avec la date de mise à jour.
+    Les changements prennent effet dès leur publication.
+  </p>
+
+  <h2>11. Contact</h2>
+  <p>
+    Pour toute question relative à cette politique de confidentialité, contactez :
+    <br />
+    <a href="mailto:contact@notys.app">contact@notys.app</a>
+    <br />
+    <em>(Remplacez cette adresse par votre adresse réelle avant publication.)</em>
+  </p>
+
+  <footer>
+    <p>Noty's · Application locale de prise de notes · Aucune donnée collectée.</p>
+  </footer>
+
+</body>
+</html>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Download, Upload, AlertTriangle, CheckCircle, Trash2, Shield, Sparkles } from 'lucide-react';
 import { NoteDB, FolderDB, db } from '@/lib/db';
+import { PALETTE, DEFAULT_COLOR } from '@/lib/constants';
 import TripleWave from '@/components/TripleWave';
 import Mascot from '@/components/Mascot';
 import DotGrid from '@/components/DotGrid';
@@ -16,6 +17,10 @@ const NOTE_FIELDS   = ['id', 'title', 'content', 'color', 'is_favorite', 'folder
 const FOLDER_FIELDS = ['id', 'name', 'color', 'parent_id', 'created_date', 'updated_date', 'position'];
 const pick = (obj, fields) =>
   Object.fromEntries(fields.filter(k => k in obj).map(k => [k, obj[k]]));
+
+const MAX_SUPPORTED_VERSION = 2;
+const VALID_COLORS = new Set(PALETTE.map(p => p.bg));
+const VALID_NOTE_TYPES = new Set(['note', 'voice']);
 
 /* ── Cycle detection — prevents infinite loops on import ── */
 function hasFolderCycle(folders) {
@@ -45,6 +50,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
 
   const [status, setStatus]                     = useState(null);
   const [message, setMessage]                   = useState('');
+  const [exporting, setExporting]               = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const pageBg   = dark ? '#1a1a2e' : '#FFFBFE';
@@ -52,7 +58,8 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
 
   /* ── Export ── */
   const handleExport = async () => {
-    setStatus('loading');
+    setExporting(true);
+    setStatus(null);
     try {
       const [notes, folders] = await Promise.all([NoteDB.list(), FolderDB.list()]);
       const safeNotes   = notes.map(n => pick(n, NOTE_FIELDS));
@@ -71,6 +78,8 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
     } catch (err) {
       setStatus('error');
       setMessage(err?.message || 'Erreur lors de l\'export.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -95,6 +104,10 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
       if (!data || typeof data !== 'object') throw new Error('Format invalide : fichier JSON attendu.');
       if (!Array.isArray(data.notes)) throw new Error('Format invalide : tableau "notes" manquant.');
       if (data.version !== undefined && typeof data.version !== 'number') throw new Error('Format invalide : champ "version" incorrect.');
+      /* Version compatibility — reject files from newer, potentially incompatible app versions */
+      if (data.version !== undefined && data.version > MAX_SUPPORTED_VERSION) {
+        throw new Error(`Version de sauvegarde ${data.version} non supportée (max : ${MAX_SUPPORTED_VERSION}). Mets l'application à jour.`);
+      }
       if (data.folders !== undefined && !Array.isArray(data.folders)) throw new Error('Format invalide : tableau "folders" incorrect.');
       if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
       if (data.folders && hasFolderCycle(data.folders)) throw new Error('Structure corrompue : cycle détecté dans les dossiers.');
@@ -122,11 +135,28 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
           }
         }
 
-        /* Step 3 : insert notes (only whitelisted fields) */
+        /* Step 3 : insert notes (only whitelisted fields, with field sanitisation) */
         for (const n of (data.notes || [])) {
           const { id, folder_id, ...rest } = n;
           const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
           const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
+
+          /* Sanitise individual fields to prevent corrupt data entering the DB */
+          if (typeof safeRest.title !== 'string')   safeRest.title   = '';
+          if (!VALID_COLORS.has(safeRest.color))    safeRest.color   = DEFAULT_COLOR;
+          if (!VALID_NOTE_TYPES.has(safeRest.type)) safeRest.type    = 'note';
+          if (typeof safeRest.is_favorite !== 'boolean') safeRest.is_favorite = false;
+          /* Validate audio_data: must be a data: URI for audio, max 10 MB */
+          if (safeRest.audio_data != null) {
+            if (
+              typeof safeRest.audio_data !== 'string' ||
+              !safeRest.audio_data.startsWith('data:audio/') ||
+              safeRest.audio_data.length > 10 * 1_048_576
+            ) {
+              safeRest.audio_data = null;
+            }
+          }
+
           await db.notes.add({ ...safeRest, folder_id: newFolderId });
         }
       });
@@ -265,13 +295,17 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
             </div>
           </div>
           <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: exporting ? 1 : 1.02 }}
+            whileTap={{ scale: exporting ? 1 : 0.97 }}
             onClick={handleExport}
-            disabled={status === 'loading'}
+            disabled={exporting}
             className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-            style={{ background: '#1e3a5f', color: 'white' }}
+            style={{ background: '#1e3a5f', color: 'white', opacity: exporting ? 0.75 : 1 }}
           >
-            <span style={{ fontSize: 18 }}>💾</span> Exporter
+            {exporting
+              ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'inline-block' }}>⟳</motion.span> Export en cours…</>
+              : <><span style={{ fontSize: 18 }}>💾</span> Exporter</>
+            }
           </motion.button>
         </motion.div>
 

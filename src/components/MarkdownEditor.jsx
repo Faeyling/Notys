@@ -109,6 +109,9 @@ export default function MarkdownEditor({ value, onChange, fg }) {
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder="Écris ta note en Markdown..."
+        spellCheck
+        autoCapitalize="sentences"
+        autoCorrect="on"
         className="flex-1 resize-none text-sm leading-relaxed outline-none bg-transparent"
         style={{
           color: fg,
@@ -125,7 +128,7 @@ export function renderMarkdown(text) {
   const safe = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(?<!\*)_(.+?)_(?!\*)/g, '<em>$1</em>')
+    .replace(/(?<![*_])_([^_\n]+?)_(?![*_])/g, '<em>$1</em>')
     .replace(/&lt;u&gt;(.+?)&lt;\/u&gt;/g, '<u>$1</u>')
     .replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.08);padding:1px 4px;border-radius:4px;font-size:0.9em">$1</code>');
 

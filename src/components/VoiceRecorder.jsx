@@ -30,6 +30,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   const analyserRef   = useRef(null);
   const animFrameRef  = useRef(null);
   const audioCtxRef   = useRef(null);
+  const streamRef     = useRef(null);   // keeps track of the mic stream for cleanup
   const modalRef      = useRef(null);
 
   const pal = PALETTE.find(p => p.bg === color) || PALETTE[8];
@@ -58,13 +59,43 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       clearInterval(timerRef.current);
       cancelAnimationFrame(animFrameRef.current);
       audioRef.current?.pause();
+      /* Stop any active recording so the mic indicator turns off immediately */
+      if (recorderRef.current?.state !== 'inactive') {
+        recorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      audioCtxRef.current?.close().catch(() => {});
+      audioCtxRef.current = null;
     };
   }, []);
 
   const startRecording = async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      /* getUserMedia can hang indefinitely on Android if the user ignores the
+         permission prompt. Race it against a 12-second timeout so the modal
+         never stays stuck — the timeout rejects with a custom name we detect.
+         timeoutId is cleared immediately after the race so the timer never
+         fires as a dangling side-effect when getUserMedia wins. */
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          const err = new Error('Timeout');
+          err.name = 'TimeoutError';
+          reject(err);
+        }, 12_000);
+      });
+      let stream;
+      try {
+        stream = await Promise.race([
+          navigator.mediaDevices.getUserMedia({ audio: true }),
+          timeoutPromise,
+        ]);
+      } finally {
+        clearTimeout(timeoutId); /* always cancel the timer once the race settles */
+      }
+      streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
@@ -108,7 +139,8 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       };
       recorder.onstop = async () => {
         cancelAnimationFrame(animFrameRef.current);
-        stream.getTracks().forEach(t => t.stop());
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
         audioCtxRef.current?.close().catch(() => {});
         audioCtxRef.current = null;
         /* Show converting indicator while FileReader encodes the blob */
@@ -141,12 +173,20 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         });
       }, 1000);
     } catch (err) {
-      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+      if (err?.name === 'TimeoutError') {
+        setError("Délai dépassé — accepte l'accès au microphone dans la popup du navigateur et réessaie.");
+      } else if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
         setError("Permission micro refusée. Appuie sur l'icône 🔒 dans la barre d'adresse → Autorisations → Microphone → Autoriser, puis recharge la page.");
       } else if (err?.name === 'NotFoundError') {
         setError("Aucun microphone détecté. Branche un micro ou vérifie que ton appareil en possède un.");
+      } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
+        setError("Le micro est utilisé par une autre application. Ferme-la et réessaie.");
+      } else if (err?.name === 'OverconstrainedError') {
+        setError("Paramètres audio non supportés par cet appareil.");
+      } else if (err?.name === 'AbortError') {
+        setError("Accès au micro interrompu. Réessaie.");
       } else {
-        setError("Microphone inaccessible. Ferme les autres apps qui l'utilisent et réessaie.");
+        setError(`Microphone inaccessible${err?.name ? ` (${err.name})` : ''}. Ferme les autres apps et réessaie.`);
       }
     }
   };
@@ -330,7 +370,12 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
           {phase === 'preview' && (
             <button
-              onClick={() => { setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null); }}
+              onClick={() => {
+              /* Pause any current playback before resetting */
+              if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+              setPlaying(false);
+              setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null);
+            }}
               className="mt-4 px-5 py-2 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
               style={{
                 color: pal.bg,
