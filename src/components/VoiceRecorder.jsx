@@ -72,6 +72,11 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
   const startRecording = async () => {
     setError(null);
+    /* Release any stream left open from a previous aborted recording before
+       acquiring a new one — prevents a dangling mic indicator on the OS. */
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    let stream;
     try {
       /* getUserMedia can hang indefinitely on Android if the user ignores the
          permission prompt. Race it against a 12-second timeout so the modal
@@ -86,14 +91,13 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           reject(err);
         }, 12_000);
       });
-      let stream;
       try {
         stream = await Promise.race([
           navigator.mediaDevices.getUserMedia({ audio: true }),
           timeoutPromise,
         ]);
       } finally {
-        clearTimeout(timeoutId); /* always cancel the timer once the race settles */
+        clearTimeout(timeoutId);
       }
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
@@ -147,6 +151,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         setPhase('converting');
         setBars(Array(24).fill(4));
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        chunksRef.current = []; /* free binary chunks — base64 URL is the durable copy */
         const url = await blobToBase64(blob);
         /* Size guard: base64 is ~4/3 of binary size */
         const sizeMB = url.length * 0.75 / 1_048_576;
@@ -173,6 +178,11 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         });
       }, 1000);
     } catch (err) {
+      /* If the stream was acquired before the failure, stop its tracks immediately
+         so the OS mic indicator disappears — the next startRecording call also
+         does this, but we want the mic off right now, not on the next attempt. */
+      stream?.getTracks().forEach(t => t.stop());
+      if (streamRef.current === stream) streamRef.current = null;
       if (err?.name === 'TimeoutError') {
         setError("Délai dépassé — accepte l'accès au microphone dans la popup du navigateur et réessaie.");
       } else if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {

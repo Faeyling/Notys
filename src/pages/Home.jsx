@@ -178,8 +178,14 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const [showBackupReminder, setShowBackupReminder] = useState(false);
   const [showFab, setShowFab]             = useState(false);
 
-  const scrollRef       = useRef(null);
-  const deletingIdsRef  = useRef(new Set());
+  const scrollRef          = useRef(null);
+  const deletingIdsRef     = useRef(new Set());
+  /* togglingStarRef: prevents a rapid double-tap from toggling twice before the
+     first DB write resolves, which would leave the UI in a diverged state. */
+  const togglingStarRef    = useRef(new Set());
+  /* isDraggingRef: prevents a second drag from starting DB writes while the
+     first batch of position writes is still in-flight. */
+  const isDraggingRef      = useRef(false);
   const [scrolled, setScrolled] = useState(false);
   const [wiggle, setWiggle]     = useState(false);
   const wiggleTimer             = useRef(null);
@@ -375,15 +381,21 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   };
 
   const handleToggleStar = async (note) => {
+    /* Skip if a toggle is already in-flight for this note — prevents a rapid
+       double-tap from applying two writes with the same base state, which would
+       leave the DB and UI diverged after the second rollback. */
+    if (togglingStarRef.current.has(note.id)) return;
+    togglingStarRef.current.add(note.id);
     const updated = { ...note, is_favorite: !note.is_favorite };
     setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
     if (openNote?.id === note.id) setOpenNote(updated);
     try {
       await NoteDB.update(note.id, { is_favorite: updated.is_favorite });
     } catch {
-      /* Rollback */
       setNotes(prev => prev.map(n => n.id === note.id ? note : n));
       if (openNote?.id === note.id) setOpenNote(note);
+    } finally {
+      togglingStarRef.current.delete(note.id);
     }
   };
 
@@ -510,6 +522,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const handleDragEnd = async (result) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
+    if (isDraggingRef.current) return; /* previous DB writes still in-flight */
 
     /* Dropped INTO a folder → move item */
     if (destination.droppableId.startsWith('folder-drop-')) {
@@ -540,20 +553,24 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         if (it._type === 'folder') setFolders(prev => prev.map(f => f.id === it.id ? { ...f, position: i } : f));
         else setNotes(prev => prev.map(n => n.id === it.id ? { ...n, position: i } : n));
       });
-      /* Persist to DB — if any write fails, reload from DB to restore consistent state */
+      /* Persist to DB — guard against a second drag firing before these writes
+         complete, which could interleave position values from two separate drags. */
+      isDraggingRef.current = true;
       const writes = reordered.map((it, i) =>
         it._type === 'folder'
           ? FolderDB.update(it.id, { position: i })
           : NoteDB.update(it.id, { position: i })
       );
-      Promise.all(writes).catch(async () => {
-        /* DB writes failed — reload authoritative state and notify user */
-        setDragError(true);
-        setTimeout(() => setDragError(false), 3000);
-        const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
-        setNotes(n.filter(x => x != null && x.id != null));
-        setFolders(f.filter(x => x != null && x.id != null));
-      });
+      Promise.all(writes)
+        .catch(async () => {
+          /* DB writes failed — reload authoritative state and notify user */
+          setDragError(true);
+          setTimeout(() => setDragError(false), 3000);
+          const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
+          setNotes(n.filter(x => x != null && x.id != null));
+          setFolders(f.filter(x => x != null && x.id != null));
+        })
+        .finally(() => { isDraggingRef.current = false; });
     }
   };
 

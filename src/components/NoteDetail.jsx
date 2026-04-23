@@ -39,6 +39,10 @@ export default function NoteDetail({
   const isDirtyRef      = useRef(false);
   /* pendingCaretRef: position to restore in the textarea after double-tap-to-edit */
   const pendingCaretRef = useRef(null);
+  /* onSaveRef: always points to the latest onSave prop so the debounced timeout
+     never captures a stale version after a parent re-render. */
+  const onSaveRef       = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
   const dragControls    = useDragControls();
 
   /* Single effect keeps latestRef atomic — avoids the window where one field
@@ -63,6 +67,11 @@ export default function NoteDetail({
 
   useEffect(() => {
     if (note) {
+      /* Cancel any in-flight save before resetting state — prevents a pending
+         300ms timeout from writing stale content to the newly loaded note. */
+      clearTimeout(saveTimer.current);
+      clearTimeout(saveStateTimer.current);
+      setSaveState('idle');
       setTitle(note.title || '');
       setContent(note.content || '');
       setEditing(false);
@@ -84,20 +93,22 @@ export default function NoteDetail({
       : html;
   }, [content]);
 
+  /* autoSave reads onSave and note from refs so it never captures stale values —
+     no dependency array needed, the callback is stable for the component lifetime. */
   const autoSave = useCallback((newTitle, newContent) => {
     clearTimeout(saveTimer.current);
     clearTimeout(saveStateTimer.current);
     setSaveState('saving');
     saveTimer.current = setTimeout(async () => {
       try {
-        await onSave(note, { title: newTitle, content: newContent });
+        await onSaveRef.current(latestRef.current.note, { title: newTitle, content: newContent });
         setSaveState('saved');
       } catch {
         setSaveState('error');
       }
       saveStateTimer.current = setTimeout(() => setSaveState('idle'), 1500);
     }, 300);
-  }, [note, onSave]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTitleChange = (v) => {
     setTitle(v);
@@ -153,18 +164,30 @@ export default function NoteDetail({
       .catch(() => { setCopied('err'); setTimeout(() => setCopied(false), 1500); });
   };
 
+  /* Discard the cached Audio object whenever the recording changes so the next
+     play() uses the new data URL — avoids playing a stale/deleted recording. */
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    }
+  }, [note?.audio_data]);
+
   const togglePlay = () => {
     if (!note?.audio_data) return;
-    if (!audioRef.current) audioRef.current = new Audio(note.audio_data);
+    if (!audioRef.current) {
+      const audio = new Audio(note.audio_data);
+      /* onended set once at creation — property assignment, not addEventListener,
+         so there is no accumulation, but binding here makes the intent explicit. */
+      audio.onended = () => setPlaying(false);
+      audioRef.current = audio;
+    }
     if (playing) {
       audioRef.current.pause();
       setPlaying(false);
     } else {
-      audioRef.current.onended = () => setPlaying(false);
-      audioRef.current.play().catch(() => {
-        /* Autoplay policy or codec error — reset state so the button stays usable */
-        setPlaying(false);
-      });
+      audioRef.current.play().catch(() => setPlaying(false));
       setPlaying(true);
     }
   };
