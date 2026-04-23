@@ -21,6 +21,11 @@ function EmptyFolder({ dark }) {
   );
 }
 
+/* Above this threshold the full grid is not rendered — avoids freezing the
+   browser on very large folders. Items beyond the cap are still accessible
+   via search. */
+const RENDER_CAP = 100;
+
 export default function FolderLayer({
   folder, items, onClose,
   onOpenNote, onOpenFolder,
@@ -100,7 +105,7 @@ export default function FolderLayer({
                   className="grid gap-3"
                   style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
                 >
-                  {items.map((item, idx) => {
+                  {(items.length > RENDER_CAP ? items.slice(0, RENDER_CAP) : items).map((item, idx) => {
                     const isFolder = item._type === 'folder';
                     const dId = `${isFolder ? 'f' : 'n'}-${item.id}`;
                     return (
@@ -128,6 +133,11 @@ export default function FolderLayer({
               )}
             </Droppable>
           </DragDropContext>
+        )}
+        {items.length > RENDER_CAP && (
+          <p className="text-xs text-center mt-4 opacity-50" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#374151' }}>
+            {items.length - RENDER_CAP} éléments non affichés — utilise la recherche pour les retrouver.
+          </p>
         )}
       </div>
     </motion.div>

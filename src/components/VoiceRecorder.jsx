@@ -292,7 +292,8 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           <p
             className="text-2xl font-bold mb-6"
             style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
-            aria-live="off"
+            aria-live="polite"
+            aria-atomic="true"
             aria-label={`Durée : ${fmt(elapsed)}`}
           >
             {fmt(elapsed)}

@@ -19,6 +19,7 @@ const MAX_RENDER_CHARS = 50_000;
 
 export default function NoteDetail({
   note, folders, dark, onClose, onToggleStar, onDelete, onSave, onColorChange,
+  onRegisterExitEditing,
 }) {
   const [editing, setEditing]               = useState(false);
   const [showPreview, setShowPreview]       = useState(false);
@@ -43,6 +44,22 @@ export default function NoteDetail({
      never captures a stale version after a parent re-render. */
   const onSaveRef       = useRef(onSave);
   useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+
+  /* editingRef: lets the mobile back handler (registered below) read the current
+     editing state without capturing a stale closure. */
+  const editingRef = useRef(editing);
+  useEffect(() => { editingRef.current = editing; }, [editing]);
+
+  /* Register a back-button interceptor with the parent (Home) so that pressing
+     the hardware back button exits edit mode first rather than closing the note.
+     Returns true if it handled the press, false if the note should close. */
+  useEffect(() => {
+    onRegisterExitEditing?.(() => {
+      if (editingRef.current) { setEditing(false); return true; }
+      return false;
+    });
+    return () => onRegisterExitEditing?.(null);
+  }, [onRegisterExitEditing]);
   const dragControls    = useDragControls();
 
   /* Single effect keeps latestRef atomic — avoids the window where one field

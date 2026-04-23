@@ -132,7 +132,6 @@ export default function GridCard({
                 }}
                 onClick={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}
-                onTouchStart={e => e.stopPropagation()}
                 className="w-full bg-transparent outline-none border-b font-bold text-xs leading-tight"
                 style={{ color: titleColor, borderColor: `${titleColor}60`, fontFamily: '"Quicksand", sans-serif' }}
               />

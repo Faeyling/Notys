@@ -25,10 +25,11 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 /* ── Cycle detection for folder moves ─────────────────── *
    Returns the Set of all descendant folder IDs of `folderId`.
    Used to prevent A→B→A circular parent chains.              */
-function getAllDescendantIds(folderId, allFolders) {
+function getAllDescendantIds(folderId, allFolders, maxIterations = 500) {
   const result = new Set();
   const queue  = [folderId];
-  while (queue.length) {
+  let i = 0;
+  while (queue.length && i++ < maxIterations) {
     const id = queue.shift();
     for (const f of allFolders) {
       if (f.parent_id === id && !result.has(f.id)) {
@@ -191,14 +192,23 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const wiggleTimer             = useRef(null);
 
   /* ── Back-button handler (registered once via refs) ───── */
-  const openNoteRef   = useRef(null);
-  const openFolderRef = useRef(null);
+  const openNoteRef         = useRef(null);
+  const openFolderRef       = useRef(null);
+  /* noteExitEditingRef: set by NoteDetail when it mounts; calling it exits
+     editing mode and returns true, or returns false if not editing. */
+  const noteExitEditingRef  = useRef(null);
   useEffect(() => { openNoteRef.current   = openNote;   }, [openNote]);
   useEffect(() => { openFolderRef.current = openFolder; }, [openFolder]);
 
   useEffect(() => {
     onRegisterBack?.(() => {
-      if (openNoteRef.current)   { setOpenNote(null);   return true; }
+      if (openNoteRef.current) {
+        /* First press while editing → exit editor without closing the note.
+           Second press (or press while not editing) → close the note. */
+        if (noteExitEditingRef.current?.()) return true;
+        setOpenNote(null);
+        return true;
+      }
       if (openFolderRef.current) { setOpenFolder(null); return true; }
       return false;
     });
@@ -702,7 +712,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       <div
         ref={scrollRef}
         className="relative z-10 flex-1 overflow-y-auto"
-        style={{ paddingBottom: 80, touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         onScroll={onScroll}
       >
         <AnimatePresence mode="wait">
@@ -1010,6 +1020,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             onDelete={handleDelete}
             onSave={handleSaveNote}
             onColorChange={handleColorChange}
+            onRegisterExitEditing={fn => { noteExitEditingRef.current = fn; }}
           />
         )}
       </AnimatePresence>

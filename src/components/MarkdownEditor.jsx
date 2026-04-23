@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
 /* ── DOMPurify CSS whitelist ───────────────────────────────────────────────
@@ -40,7 +40,13 @@ const TOOLBAR = [
 ];
 
 export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset }) {
-  const taRef = useRef(null);
+  const taRef     = useRef(null);
+  /* valueRef lets apply() always read the latest value without being
+     recreated on every keystroke — toolbar buttons never hold stale closures. */
+  const valueRef  = useRef(value);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { valueRef.current = value; },   [value]);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   /* On mount: if a caret position was requested (from double-tap), apply it. */
   useEffect(() => {
@@ -55,39 +61,40 @@ export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset
     ta.scrollTop = Math.max(0, linesBefore * lineHeight - ta.clientHeight / 2);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
 
-  const apply = (tool) => {
-    const ta = taRef.current;
+  const apply = useCallback((tool) => {
+    const ta  = taRef.current;
     if (!ta) return;
-    const s = ta.selectionStart, e = ta.selectionEnd;
-    const sel = value.slice(s, e);
-    let newVal = value, cursor = s;
+    const val = valueRef.current;
+    const s   = ta.selectionStart, e = ta.selectionEnd;
+    const sel = val.slice(s, e);
+    let newVal = val, cursor = s;
 
     if (tool.linePrefix) {
-      const lineStart = value.lastIndexOf('\n', s - 1) + 1;
-      newVal = value.slice(0, lineStart) + tool.linePrefix + value.slice(lineStart);
+      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
+      newVal = val.slice(0, lineStart) + tool.linePrefix + val.slice(lineStart);
       cursor = s + tool.linePrefix.length;
     } else if (tool.wrap) {
       const inner = sel || 'texte';
       const wrapped = `${tool.wrap}${inner}${tool.wrap}`;
-      newVal = value.slice(0, s) + wrapped + value.slice(e);
+      newVal = val.slice(0, s) + wrapped + val.slice(e);
       cursor = s + tool.wrap.length + inner.length + tool.wrap.length;
     } else if (tool.wrapHtml) {
       const inner = sel || 'texte';
       const wrapped = `${tool.wrapHtml}${inner}${tool.closeHtml}`;
-      newVal = value.slice(0, s) + wrapped + value.slice(e);
+      newVal = val.slice(0, s) + wrapped + val.slice(e);
       cursor = s + wrapped.length;
     } else if (tool.insert) {
-      const ins = tool.insert(value, s, e);
-      newVal = value.slice(0, s) + ins + value.slice(e);
+      const ins = tool.insert(val, s, e);
+      newVal = val.slice(0, s) + ins + val.slice(e);
       cursor = s + ins.length;
     }
 
-    onChange(newVal);
+    onChangeRef.current(newVal);
     setTimeout(() => {
       if (!ta.isConnected) return;
       ta.focus(); ta.setSelectionRange(cursor, cursor);
     }, 0);
-  };
+  }, []); // stable — reads value and onChange through refs
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-2">
