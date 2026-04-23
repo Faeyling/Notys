@@ -235,11 +235,17 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   /* Scroll handler — hysteresis prevents jitter when content barely fills
      the page: compact header at y>40, expand back only below y<15 */
   const onScroll = useCallback((e) => {
-    const y = e.currentTarget.scrollTop;
+    const el = e.currentTarget;
+    const y  = el.scrollTop;
     setScrolled(prev => (prev ? y > 15 : y > 40));
-    setWiggle(true);
-    clearTimeout(wiggleTimer.current);
-    wiggleTimer.current = setTimeout(() => setWiggle(false), 400);
+    /* Only animate wiggle when there is actually something to scroll — prevents a
+       layout-feedback loop on short lists where the wave's scaleY animation
+       changes the header height, which alters scrollHeight, which re-fires onScroll. */
+    if (el.scrollHeight > el.clientHeight + 1) {
+      setWiggle(true);
+      clearTimeout(wiggleTimer.current);
+      wiggleTimer.current = setTimeout(() => setWiggle(false), 400);
+    }
   }, []);
 
   /* O(n+m) maps for note/folder counts — recalculated only when data changes */
@@ -679,7 +685,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       <div
         ref={scrollRef}
         className="relative z-10 flex-1 overflow-y-auto"
-        style={{ paddingBottom: 80, touchAction: 'pan-y' }}
+        style={{ paddingBottom: 80, touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         onScroll={onScroll}
       >
         <AnimatePresence mode="wait">

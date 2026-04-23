@@ -32,12 +32,14 @@ export default function NoteDetail({
   const [copied, setCopied]                 = useState(false);
   const [saveState, setSaveState]           = useState('idle'); // idle | saving | saved | error
 
-  const saveStateTimer = useRef(null);
-  const audioRef       = useRef(null);
-  const saveTimer      = useRef(null);
+  const saveStateTimer  = useRef(null);
+  const audioRef        = useRef(null);
+  const saveTimer       = useRef(null);
   /* isDirtyRef: prevents a pointless DB write on unmount when the user only read the note */
-  const isDirtyRef     = useRef(false);
-  const dragControls   = useDragControls();
+  const isDirtyRef      = useRef(false);
+  /* pendingCaretRef: position to restore in the textarea after double-tap-to-edit */
+  const pendingCaretRef = useRef(null);
+  const dragControls    = useDragControls();
 
   /* Single effect keeps latestRef atomic — avoids the window where one field
      is updated but the others haven't been yet (race on rapid unmount). */
@@ -107,6 +109,37 @@ export default function NoteDetail({
     isDirtyRef.current = true;
     autoSave(title, v);
   };
+
+  /* Maps a double-tap on the rendered HTML to the corresponding raw-markdown offset.
+     caretRangeFromPoint (Chrome/Safari) / caretPositionFromPoint (Firefox) give us
+     the text node + offset at the tap coordinates. We then search for that text
+     node's content in the raw markdown to find the closest caret position. */
+  const handleDoubleClick = useCallback((e) => {
+    if (editing) return;
+    let caretOffset = content.length;
+    try {
+      const range =
+        document.caretRangeFromPoint?.(e.clientX, e.clientY) ??
+        (() => {
+          const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+          if (!pos) return null;
+          const r = document.createRange();
+          r.setStart(pos.offsetNode, pos.offset);
+          return r;
+        })();
+      if (range?.startContainer?.nodeType === Node.TEXT_NODE) {
+        const nodeText    = range.startContainer.textContent;
+        const offsetInNode = range.startOffset;
+        const searchText  = nodeText.trim();
+        if (searchText) {
+          const idx = content.indexOf(searchText);
+          if (idx !== -1) caretOffset = idx + offsetInNode;
+        }
+      }
+    } catch { /* ignore — fall through to end-of-content default */ }
+    pendingCaretRef.current = caretOffset;
+    setEditing(true);
+  }, [editing, content]);
 
   const handleCopy = () => {
     const text = `${title}\n\n${content}`;
@@ -399,12 +432,12 @@ export default function NoteDetail({
         )}
       </AnimatePresence>
 
-      {/* Content area — double-tap enters edit mode */}
+      {/* Content area — double-tap enters edit mode at the tapped position */}
       <div
         className="flex-1 overflow-y-auto relative"
-        style={{ touchAction: 'auto' }}
+        style={{ touchAction: 'manipulation' }}
         onPointerDown={e => e.stopPropagation()}
-        onDoubleClick={!editing ? () => setEditing(true) : undefined}
+        onDoubleClick={!editing ? handleDoubleClick : undefined}
       >
         <div
           className="absolute inset-0 pointer-events-none"
@@ -427,7 +460,7 @@ export default function NoteDetail({
                 dangerouslySetInnerHTML={{ __html: renderedHtml }}
               />
             ) : (
-              <MarkdownEditor value={content} onChange={handleContentChange} fg={textFg} />
+              <MarkdownEditor value={content} onChange={handleContentChange} fg={textFg} initialCaretOffset={pendingCaretRef.current} />
             )
           ) : (
             content ? (

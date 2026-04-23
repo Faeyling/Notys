@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 
 /* ── DOMPurify CSS whitelist ───────────────────────────────────────────────
@@ -39,8 +39,21 @@ const TOOLBAR = [
   { label: 'Liste numérotée', linePrefix: '1. ', text: '1.' },
 ];
 
-export default function MarkdownEditor({ value, onChange, fg }) {
+export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset }) {
   const taRef = useRef(null);
+
+  /* On mount: if a caret position was requested (from double-tap), apply it. */
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta || initialCaretOffset == null) return;
+    ta.focus();
+    const safe = Math.min(Math.max(0, initialCaretOffset), ta.value.length);
+    ta.setSelectionRange(safe, safe);
+    /* Scroll the textarea so the caret is vertically centred */
+    const lineHeight = parseInt(getComputedStyle(ta).lineHeight) || 20;
+    const linesBefore = ta.value.slice(0, safe).split('\n').length - 1;
+    ta.scrollTop = Math.max(0, linesBefore * lineHeight - ta.clientHeight / 2);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
 
   const apply = (tool) => {
     const ta = taRef.current;
