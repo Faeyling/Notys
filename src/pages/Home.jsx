@@ -1086,7 +1086,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               fontFamily: 'Quicksand, sans-serif',
               fontSize: 12,
               fontWeight: 700,
-              whiteSpace: 'nowrap',
+              maxWidth: 'calc(100vw - 32px)',
+              textAlign: 'center',
             }}
             role="alert"
           >
@@ -1110,7 +1111,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               fontFamily: 'Quicksand, sans-serif',
               fontSize: 12,
               fontWeight: 700,
-              whiteSpace: 'nowrap',
+              maxWidth: 'calc(100vw - 32px)',
+              textAlign: 'center',
             }}
             role="alert"
           >

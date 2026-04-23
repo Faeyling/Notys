@@ -57,6 +57,11 @@ export default function GridCard({
   const handlePlayAudio = (e) => {
     e.stopPropagation();
     if (!item.audio_data) return;
+    /* Reject malformed data URIs before handing to the Audio constructor */
+    if (
+      typeof item.audio_data !== 'string' ||
+      !item.audio_data.startsWith('data:audio/')
+    ) return;
     /* Stop any previously playing card audio */
     if (_activeAudio) {
       try { _activeAudio.pause(); _activeAudio.currentTime = 0; } catch { /* already GC'd */ }
@@ -102,8 +107,8 @@ export default function GridCard({
           display: 'flex',
           flexDirection: 'column',
         }}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={isDragging ? {} : { scale: 1.02 }}
+        whileTap={isDragging ? {} : { scale: 0.97 }}
       >
         {/* Header strip */}
         <div
