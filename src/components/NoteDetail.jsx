@@ -75,6 +75,12 @@ export default function NoteDetail({
     return () => {
       clearTimeout(saveTimer.current);
       clearTimeout(saveStateTimer.current);
+      /* Stop any in-flight audio so it doesn't keep playing after the note closes */
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
       const { note: n, title: t, content: c } = latestRef.current;
       if (n?.id && isDirtyRef.current) {
         NoteDB.update(n.id, { title: t, content: c }).catch(() => {});
@@ -110,15 +116,17 @@ export default function NoteDetail({
       : html;
   }, [content]);
 
-  /* autoSave reads onSave and note from refs so it never captures stale values —
-     no dependency array needed, the callback is stable for the component lifetime. */
-  const autoSave = useCallback((newTitle, newContent) => {
+  /* autoSave reads all fields from latestRef — never takes parameters so both
+     title and content changes always save the most recent version of each field,
+     preventing the race where one field overwrites the other's debounce. */
+  const autoSave = useCallback(() => {
     clearTimeout(saveTimer.current);
     clearTimeout(saveStateTimer.current);
     setSaveState('saving');
     saveTimer.current = setTimeout(async () => {
+      const { note: n, title: t, content: c } = latestRef.current;
       try {
-        await onSaveRef.current(latestRef.current.note, { title: newTitle, content: newContent });
+        await onSaveRef.current(n, { title: t, content: c });
         setSaveState('saved');
       } catch {
         setSaveState('error');
@@ -130,12 +138,15 @@ export default function NoteDetail({
   const handleTitleChange = (v) => {
     setTitle(v);
     isDirtyRef.current = true;
-    autoSave(v, content);
+    /* Sync latestRef immediately so autoSave always reads the latest of BOTH fields */
+    latestRef.current = { ...latestRef.current, title: v };
+    autoSave();
   };
   const handleContentChange = (v) => {
     setContent(v);
     isDirtyRef.current = true;
-    autoSave(title, v);
+    latestRef.current = { ...latestRef.current, content: v };
+    autoSave();
   };
 
   /* Maps a double-tap on the rendered HTML to the corresponding raw-markdown offset.

@@ -557,15 +557,15 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       const reordered = [...homeItems];
       const [moved] = reordered.splice(source.index, 1);
       reordered.splice(destination.index, 0, moved);
+      /* Lock before the optimistic update so a second onDragEnd that fires
+         before DB writes complete cannot interleave position values. */
+      isDraggingRef.current = true;
       /* Optimistic UI update */
       setSortId('manual');
       reordered.forEach((it, i) => {
         if (it._type === 'folder') setFolders(prev => prev.map(f => f.id === it.id ? { ...f, position: i } : f));
         else setNotes(prev => prev.map(n => n.id === it.id ? { ...n, position: i } : n));
       });
-      /* Persist to DB — guard against a second drag firing before these writes
-         complete, which could interleave position values from two separate drags. */
-      isDraggingRef.current = true;
       const writes = reordered.map((it, i) =>
         it._type === 'folder'
           ? FolderDB.update(it.id, { position: i })

@@ -3,7 +3,8 @@
    offline fallback to cached index.html for all navigation requests.
    Required for Google Play TWA verification (installability check).      */
 
-const CACHE_NAME    = 'notys-v1';
+/* Bump this string on every deployment so the activate handler evicts stale assets */
+const CACHE_NAME    = 'notys-v2';
 const OFFLINE_PAGE  = '/';
 
 /* Assets pre-cached on install so the app loads offline from the first visit */
@@ -51,15 +52,30 @@ self.addEventListener('fetch', (event) => {
   /* Skip chrome-extension and non-http(s) schemes */
   if (!request.url.startsWith('http')) return;
 
+  /* Navigation requests (index.html) — Network-First so a new deployment is
+     picked up immediately instead of serving a stale shell from cache. */
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(OFFLINE_PAGE))
+    );
+    return;
+  }
+
+  /* All other same-origin GET requests — Cache-First (hashed asset filenames
+     guarantee freshness; fonts and images rarely change). */
   event.respondWith(
     caches.match(request).then((cached) => {
-      /* Cache hit — return immediately (Cache-First) */
       if (cached) return cached;
-
-      /* Cache miss — fetch from network */
       return fetch(request)
         .then((response) => {
-          /* Only cache successful, opaque-safe responses */
           if (
             response.ok &&
             (response.type === 'basic' || response.type === 'cors')
@@ -69,13 +85,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => {
-          /* Network failed — return cached offline fallback for navigation */
-          if (request.mode === 'navigate') {
-            return caches.match(OFFLINE_PAGE);
-          }
-          /* For other asset types, let the failure propagate */
-        });
+        .catch(() => undefined);
     })
   );
 });

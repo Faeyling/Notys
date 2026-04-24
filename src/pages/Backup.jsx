@@ -146,15 +146,20 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
           if (!VALID_COLORS.has(safeRest.color))    safeRest.color   = DEFAULT_COLOR;
           if (!VALID_NOTE_TYPES.has(safeRest.type)) safeRest.type    = 'note';
           if (typeof safeRest.is_favorite !== 'boolean') safeRest.is_favorite = false;
-          /* Validate audio_data: must be a data: URI for audio, max 10 MB */
+          /* Validate audio_data: must be a data: URI for audio, ≤ 10 MB decoded.
+             String .length measures base64 chars, not bytes — measure actual decoded
+             size: 4 base64 chars → 3 bytes, minus any trailing padding chars. */
           if (safeRest.audio_data != null) {
-            if (
-              typeof safeRest.audio_data !== 'string' ||
-              !safeRest.audio_data.startsWith('data:audio/') ||
-              safeRest.audio_data.length > 10 * 1_048_576
-            ) {
-              safeRest.audio_data = null;
+            const isValidUri = typeof safeRest.audio_data === 'string' &&
+              safeRest.audio_data.startsWith('data:audio/');
+            let tooLarge = false;
+            if (isValidUri) {
+              const b64     = safeRest.audio_data.split(',')[1] ?? '';
+              const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+              const decoded = Math.floor(b64.length * 3 / 4) - padding;
+              tooLarge = decoded > 10 * 1_048_576;
             }
+            if (!isValidUri || tooLarge) safeRest.audio_data = null;
           }
 
           await db.notes.add({ ...safeRest, folder_id: newFolderId });
