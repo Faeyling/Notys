@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import Home   from '@/pages/Home';
-import Backup from '@/pages/Backup';
-import useDarkMode from '@/hooks/useDarkMode';
+import Home          from '@/pages/Home';
+import Backup        from '@/pages/Backup';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import useDarkMode   from '@/hooks/useDarkMode';
 
 /**
  * App — root component.
@@ -59,6 +60,7 @@ export default function App() {
   };
 
   return (
+    <ErrorBoundary>
     <div style={{ position: 'relative', overflow: 'hidden', height: '100dvh' }}>
       {/* Home is always mounted, hidden behind Backup */}
       <div style={{ visibility: page === 'backup' ? 'hidden' : 'visible' }}>
@@ -94,5 +96,6 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+    </ErrorBoundary>
   );
 }

@@ -586,7 +586,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
 
   const openNoteDetail = (note) => {
     setOpenNote(note);
-    NoteDB.markOpened(note.id).catch(() => {});
+    NoteDB.markOpened(note.id).catch(err => console.warn('[NoteDB] markOpened:', err?.message));
   };
 
   const waveColor = PAGE_WAVE_COLORS[tab] || PAGE_WAVE_COLORS.home;

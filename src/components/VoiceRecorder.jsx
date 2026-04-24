@@ -28,6 +28,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   const timerRef      = useRef(null);
   const audioRef      = useRef(null);
   const analyserRef   = useRef(null);
+  const srcRef        = useRef(null);   // Web Audio MediaStreamSourceNode
   const animFrameRef  = useRef(null);
   const audioCtxRef   = useRef(null);
   const streamRef     = useRef(null);   // keeps track of the mic stream for cleanup
@@ -65,6 +66,10 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       }
       streamRef.current?.getTracks().forEach(t => t.stop());
       streamRef.current = null;
+      try { analyserRef.current?.disconnect(); } catch { /* already closed */ }
+      analyserRef.current = null;
+      try { srcRef.current?.disconnect(); } catch { /* already closed */ }
+      srcRef.current = null;
       audioCtxRef.current?.close().catch(() => {});
       audioCtxRef.current = null;
     };
@@ -113,6 +118,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         analyser.fftSize = 64;
         src.connect(analyser);
         analyserRef.current = analyser;
+        srcRef.current = src;
 
         const drawBars = () => {
           const data = new Uint8Array(analyser.frequencyBinCount);
@@ -145,6 +151,12 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
         cancelAnimationFrame(animFrameRef.current);
         streamRef.current?.getTracks().forEach(t => t.stop());
         streamRef.current = null;
+        /* Disconnect graph nodes before closing context — disconnecting after
+           close() throws InvalidStateError on some browsers. */
+        try { analyserRef.current?.disconnect(); } catch { /* already closed */ }
+        analyserRef.current = null;
+        try { srcRef.current?.disconnect(); } catch { /* already closed */ }
+        srcRef.current = null;
         audioCtxRef.current?.close().catch(() => {});
         audioCtxRef.current = null;
         /* Show converting indicator while FileReader encodes the blob */
