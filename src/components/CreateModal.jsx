@@ -13,6 +13,7 @@ export default function CreateModal({
   defaultColor = null,
   /** 'note' | 'folder' | 'voice' — pre-selects the tab when the modal opens */
   defaultType = 'note',
+  dark = false,
 }) {
   const [type, setType]         = useState(defaultType || 'note');
   const [title, setTitle]       = useState('');
@@ -117,11 +118,11 @@ export default function CreateModal({
           onClick={e => e.stopPropagation()}
           onKeyDown={trapFocus}
           className="w-full max-w-lg rounded-t-3xl p-6 pb-10 shadow-2xl"
-          style={{ background: 'white' }}
+          style={{ background: dark ? '#1e1e38' : 'white', maxHeight: '85dvh', overflowY: 'auto' }}
         >
           {/* Title row */}
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
               Créer {type === 'folder' ? 'un dossier' : 'une note'}
             </h2>
             <button
@@ -172,8 +173,8 @@ export default function CreateModal({
                 className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 transition-all"
                 style={{
                   borderColor: attempted && !title.trim() ? '#ef4444' : pal.bg,
-                  background: attempted && !title.trim() ? '#fef2f2' : `${pal.bg}22`,
-                  color: '#111827',
+                  background: attempted && !title.trim() ? (dark ? '#3a1a1a' : '#fef2f2') : `${pal.bg}22`,
+                  color: dark ? '#f0f0f0' : '#111827',
                   fontFamily: 'Quicksand, sans-serif',
                 }}
               />
@@ -197,7 +198,7 @@ export default function CreateModal({
                   style={{
                     borderColor: pal.bg,
                     background: `${pal.bg}22`,
-                    color: '#111827',
+                    color: dark ? '#f0f0f0' : '#111827',
                     fontFamily: 'Quicksand, sans-serif',
                   }}
                 />
@@ -226,8 +227,8 @@ export default function CreateModal({
                   className="w-full rounded-2xl px-4 py-3 text-sm outline-none border-2 appearance-none"
                   style={{
                     borderColor: pal.bg,
-                    background: `${pal.bg}22`,
-                    color: folderId ? '#111827' : '#9CA3AF',
+                    background: dark ? '#2a2a48' : `${pal.bg}22`,
+                    color: folderId ? (dark ? '#f0f0f0' : '#111827') : '#9CA3AF',
                     fontFamily: 'Quicksand, sans-serif',
                   }}
                 >
@@ -241,7 +242,7 @@ export default function CreateModal({
               <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
                 Couleur
               </p>
-              <ColorPicker value={color} onChange={setColor} />
+              <ColorPicker value={color} onChange={setColor} dark={dark} />
             </div>
 
             <motion.button
@@ -251,7 +252,7 @@ export default function CreateModal({
               whileTap={{ scale: title.trim() && !saved ? 0.97 : 1 }}
               className="w-full py-3.5 rounded-2xl font-bold text-sm mt-1"
               style={{
-                background: saved ? '#22c55e' : title.trim() ? pal.bg : '#F3F4F6',
+                background: saved ? '#22c55e' : title.trim() ? pal.bg : (dark ? '#2a2a48' : '#F3F4F6'),
                 color: saved ? 'white' : title.trim() ? pal.fg : '#9CA3AF',
                 fontFamily: 'Quicksand, sans-serif',
                 boxShadow: saved ? '0 4px 20px #22c55e88' : title.trim() ? `0 4px 20px ${pal.bg}88` : 'none',

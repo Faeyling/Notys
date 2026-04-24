@@ -13,6 +13,7 @@ export default function GridCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [renaming, setRenaming]   = useState(false);
   const [renameVal, setRenameVal] = useState('');
+  const [playFailed, setPlayFailed] = useState(false);
   const renameRef  = useRef(null);
   /* Tracks the Audio instance started by THIS card so we can stop it on unmount */
   const myAudioRef = useRef(null);
@@ -43,10 +44,10 @@ export default function GridCard({
     setRenaming(true);
   };
 
-  const commitRename = () => {
+  const commitRename = async () => {
     const trimmed = renameVal.trim();
-    if (trimmed && trimmed !== (item.name || item.title)) onRename?.(item, trimmed);
-    setRenaming(false);
+    if (!trimmed || trimmed === (item.name || item.title)) { setRenaming(false); return; }
+    try { await onRename?.(item, trimmed); } finally { setRenaming(false); }
   };
 
   /* Focus the input as soon as it mounts */
@@ -77,9 +78,10 @@ export default function GridCard({
     }
     _activeAudio = myAudioRef.current;
     myAudioRef.current.play().catch(() => {
-      /* Autoplay policy or codec failure — release the singleton */
       _activeAudio = null;
       myAudioRef.current = null;
+      setPlayFailed(true);
+      setTimeout(() => setPlayFailed(false), 2000);
     });
   };
 
@@ -121,7 +123,7 @@ export default function GridCard({
               <Folder size={12} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
             )}
             {type === 'note' && item.type === 'voice' && (
-              <Mic size={11} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
+              <Mic size={14} style={{ color: titleColor, opacity: 0.75, marginTop: 2, flexShrink: 0 }} />
             )}
             {renaming ? (
               <input
@@ -159,30 +161,30 @@ export default function GridCard({
           >
             <button
               onClick={stopProp(() => onColorChange(item))}
-              className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+              className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
               style={{ background: 'rgba(0,0,0,0.09)' }}
               aria-label="Changer la couleur"
             >
-              <Palette size={10} style={{ color: titleColor }} />
+              <Palette size={11} style={{ color: titleColor }} />
             </button>
             {/* Rename — folders only */}
             {type === 'folder' && (
               <button
                 onClick={startRename}
-                className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+                className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
                 style={{ background: renaming ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.09)' }}
                 aria-label="Renommer"
               >
-                <Edit2 size={10} style={{ color: titleColor }} />
+                <Edit2 size={11} style={{ color: titleColor }} />
               </button>
             )}
             <button
               onClick={stopProp(() => setShowDeleteConfirm(true))}
-              className="w-5 h-5 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
+              className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
               style={{ background: 'rgba(0,0,0,0.09)' }}
               aria-label="Supprimer"
             >
-              <Trash2 size={10} style={{ color: titleColor }} />
+              <Trash2 size={11} style={{ color: titleColor }} />
             </button>
           </div>
         </div>
@@ -209,11 +211,14 @@ export default function GridCard({
                 onClick={handlePlayAudio}
                 onMouseDown={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
-                aria-label="Écouter la note vocale"
+                aria-label={playFailed ? 'Lecture impossible' : 'Écouter la note vocale'}
+                title={playFailed ? 'Lecture impossible' : undefined}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
-                style={{ background: 'rgba(0,0,0,0.12)' }}
+                style={{ background: playFailed ? 'rgba(220,38,38,0.18)' : 'rgba(0,0,0,0.12)' }}
               >
-                <Play size={10} fill={titleColor} style={{ color: titleColor }} />
+                {playFailed
+                  ? <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>✕</span>
+                  : <Play size={10} fill={titleColor} style={{ color: titleColor }} />}
               </button>
             )}
             {/* Star */}
@@ -267,6 +272,11 @@ export default function GridCard({
                 </p>
                 <p className="text-sm text-center mb-5" style={{ color: '#6B7280' }}>
                   "{item.title || item.name}" sera supprimé définitivement.
+                  {type === 'folder' && (item._noteCount ?? 0) > 0 && (
+                    <><br /><span style={{ color: '#ef4444', fontSize: 12 }}>
+                      ⚠️ Les {item._noteCount} note{item._noteCount > 1 ? 's' : ''} qu'il contient seront déplacées à la racine.
+                    </span></>
+                  )}
                 </p>
                 <div className="flex gap-3">
                   <button

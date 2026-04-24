@@ -30,6 +30,7 @@ export default function NoteDetail({
   const [showVoice, setShowVoice]           = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [playing, setPlaying]               = useState(false);
+  const [playFailed, setPlayFailed]         = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [saveState, setSaveState]           = useState('idle'); // idle | saving | saved | error
 
@@ -215,7 +216,11 @@ export default function NoteDetail({
       audioRef.current.pause();
       setPlaying(false);
     } else {
-      audioRef.current.play().catch(() => setPlaying(false));
+      audioRef.current.play().catch(() => {
+        setPlaying(false);
+        setPlayFailed(true);
+        setTimeout(() => setPlayFailed(false), 2000);
+      });
       setPlaying(true);
     }
   };
@@ -343,11 +348,11 @@ export default function NoteDetail({
 
         {/* Top bar ─ left: [back][save-indicator]  right: [all action icons] */}
         <div
-          className="flex items-center justify-between px-4 pb-1 relative z-10 gap-1"
+          className="flex items-center justify-between px-4 pb-1 relative z-10 gap-2"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           {/* Left group */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <IconBtn
               onClick={() => {
                 clearTimeout(saveTimer.current);
@@ -363,7 +368,7 @@ export default function NoteDetail({
           </div>
 
           {/* Right group */}
-          <div className="flex items-center gap-1 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <IconBtn
               onClick={() => setEditing(v => !v)}
               active={editing}
@@ -411,11 +416,14 @@ export default function NoteDetail({
               <IconBtn
                 onClick={togglePlay}
                 active={playing}
-                ariaLabel={playing ? 'Mettre en pause' : 'Écouter la note vocale'}
+                ariaLabel={playFailed ? 'Lecture impossible' : playing ? 'Mettre en pause' : 'Écouter la note vocale'}
+                style={playFailed ? { background: 'rgba(220,38,38,0.15)' } : undefined}
               >
-                {playing
-                  ? <Pause size={15} style={{ color: pal.fg }} />
-                  : <Play  size={15} style={{ color: pal.fg }} />}
+                {playFailed
+                  ? <AlertCircle size={15} style={{ color: '#dc2626' }} />
+                  : playing
+                    ? <Pause size={15} style={{ color: pal.fg }} />
+                    : <Play  size={15} style={{ color: pal.fg }} />}
               </IconBtn>
             )}
             {note.type === 'voice' && (
@@ -449,7 +457,7 @@ export default function NoteDetail({
             </>
           ) : (
             <h2
-              className="text-lg font-bold leading-snug"
+              className="text-lg font-bold leading-snug line-clamp-2"
               style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif', fontWeight: 700 }}
             >
               {note.title || 'Sans titre'}
@@ -477,6 +485,7 @@ export default function NoteDetail({
               <ColorPicker
                 value={note.color}
                 onChange={c => { onColorChange(note, c); setShowColorPicker(false); }}
+                dark={dark}
               />
             </div>
           </motion.div>
@@ -486,7 +495,7 @@ export default function NoteDetail({
       {/* Content area — double-tap enters edit mode at the tapped position */}
       <div
         className="flex-1 overflow-y-auto relative"
-        style={{ touchAction: 'manipulation' }}
+        style={{ touchAction: 'pan-y' }}
         onPointerDown={e => e.stopPropagation()}
         onDoubleClick={!editing ? handleDoubleClick : undefined}
       >

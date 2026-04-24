@@ -787,12 +787,13 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               <div className="flex items-center gap-2">
                 <Mascot variant="snorkel" size={42} animate={animated} aria-hidden="true" />
                 <div className="relative flex-1">
+                  <label htmlFor="home-search-input" className="sr-only">Rechercher tes notes</label>
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#9CA3AF' }} />
                   <input
+                    id="home-search-input"
                     value={searchQ}
                     onChange={e => setSearchQ(e.target.value)}
                     placeholder="Rechercher..."
-                    aria-label="Rechercher tes notes"
                     autoFocus
                     className="w-full pl-9 py-2.5 rounded-2xl text-sm outline-none border-2"
                     style={{
@@ -834,12 +835,14 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                           />
                         ))}
                       </div>
-                      {searchTotal > MAX_SEARCH_RESULTS && (
+                      {searchResults.length >= MAX_SEARCH_RESULTS && (
                         <p
                           className="text-xs text-center pt-2"
                           style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}
                         >
-                          {searchTotal - MAX_SEARCH_RESULTS} autre{searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} résultat{searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} — affine ta recherche pour les voir
+                          {searchTotal > MAX_SEARCH_RESULTS
+                            ? `${searchTotal - MAX_SEARCH_RESULTS} autre${searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} résultat${searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} — affine ta recherche pour les voir`
+                            : `Affichage limité à ${MAX_SEARCH_RESULTS} résultats — affine ta recherche pour plus de précision`}
                         </p>
                       )}
                     </>
@@ -943,6 +946,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             background: dark ? 'rgba(26,26,46,0.97)' : 'rgba(255,255,255,0.97)',
             backdropFilter: 'blur(16px)',
             borderTop: dark ? '1px solid #2d2d4a' : '1px solid #F3F4F6',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         >
           <div className="flex h-16">
@@ -999,7 +1003,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         folders={folders}
         parentFolderId={openFolder?.id || null}
         defaultColor={openFolder?.color || null}
-        defaultType={createType}   /* pre-selects the correct tab */
+        defaultType={createType}
+        dark={dark}
       />
 
       {/* ColorChangeModal — opened when onColorChange(item) is called from a GridCard */}
@@ -1096,7 +1101,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             exit={{ opacity: 0, y: 8 }}
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
             style={{
-              background: 'rgba(0,0,0,0.7)',
+              background: dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.7)',
               backdropFilter: 'blur(8px)',
               color: 'white',
               fontFamily: 'Quicksand, sans-serif',

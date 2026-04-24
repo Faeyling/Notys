@@ -286,9 +286,9 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
           {/* Error message */}
           {error && (
-            <div className="flex items-start gap-2 mb-4 rounded-2xl px-3 py-2 text-left" style={{ background: 'rgba(0,0,0,0.15)' }}>
-              <AlertTriangle size={14} style={{ color: pal.fg, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
-              <p className="text-xs font-semibold leading-snug" style={{ color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}>{error}</p>
+            <div className="flex items-start gap-2 mb-4 rounded-2xl px-3 py-2 text-left" style={{ background: 'rgba(220,38,38,0.15)' }}>
+              <AlertTriangle size={14} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+              <p className="text-xs font-semibold leading-snug" style={{ color: '#ef4444', fontFamily: 'Quicksand, sans-serif' }}>{error}</p>
             </div>
           )}
 
@@ -394,26 +394,21 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
                 <Check size={18} style={{ color: pal.fg }} />
               </button>
             )}
+            {phase === 'preview' && (
+              <button
+                onClick={() => {
+                  if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+                  setPlaying(false);
+                  setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null);
+                }}
+                aria-label="Ré-enregistrer"
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:opacity-80 active:scale-95"
+                style={{ background: 'rgba(0,0,0,0.12)' }}
+              >
+                <Mic size={18} style={{ color: pal.fg, opacity: 0.7 }} />
+              </button>
+            )}
           </div>
-
-          {phase === 'preview' && (
-            <button
-              onClick={() => {
-              /* Pause any current playback before resetting */
-              if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-              setPlaying(false);
-              setPhase('idle'); setAudioUrl(null); setElapsed(0); setError(null);
-            }}
-              className="mt-4 px-5 py-2 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
-              style={{
-                color: pal.bg,
-                background: `${pal.fg}25`,
-                fontFamily: 'Quicksand, sans-serif',
-              }}
-            >
-              🔄 Ré-enregistrer
-            </button>
-          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

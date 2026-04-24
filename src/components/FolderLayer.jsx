@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { ChevronLeft, Folder } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
@@ -21,10 +22,7 @@ function EmptyFolder({ dark }) {
   );
 }
 
-/* Above this threshold the full grid is not rendered — avoids freezing the
-   browser on very large folders. Items beyond the cap are still accessible
-   via search. */
-const RENDER_CAP = 100;
+const PAGE_SIZE  = 50;
 
 export default function FolderLayer({
   folder, items, onClose,
@@ -32,9 +30,11 @@ export default function FolderLayer({
   onToggleStar, onDelete, onColorChange, onRename, onDragEnd,
   dark,
 }) {
-  if (!folder) return null;
-
+  /* Hooks must be called before any conditional return */
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const dragControls = useDragControls();
+
+  if (!folder) return null;
   const pal    = PALETTE.find(p => p.bg === folder.color) || PALETTE[8];
   const pageBg = dark ? '#1a1a2e' : '#FAFAFA';
 
@@ -90,7 +90,7 @@ export default function FolderLayer({
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto relative z-10 px-4 py-4"
-        style={{ touchAction: 'auto', paddingBottom: 80 }}
+        style={{ touchAction: 'pan-y', paddingBottom: 80 }}
         onPointerDown={e => e.stopPropagation()}
       >
         {items.length === 0 ? (
@@ -105,7 +105,7 @@ export default function FolderLayer({
                   className="grid gap-3"
                   style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
                 >
-                  {(items.length > RENDER_CAP ? items.slice(0, RENDER_CAP) : items).map((item, idx) => {
+                  {items.slice(0, visibleCount).map((item, idx) => {
                     const isFolder = item._type === 'folder';
                     const dId = `${isFolder ? 'f' : 'n'}-${item.id}`;
                     return (
@@ -134,10 +134,14 @@ export default function FolderLayer({
             </Droppable>
           </DragDropContext>
         )}
-        {items.length > RENDER_CAP && (
-          <p className="text-xs text-center mt-4 opacity-50" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#374151' }}>
-            {items.length - RENDER_CAP} éléments non affichés — utilise la recherche pour les retrouver.
-          </p>
+        {items.length > visibleCount && (
+          <button
+            onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+            className="w-full mt-4 py-2.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+            style={{ background: `${pal.fg}18`, color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
+          >
+            Voir {Math.min(PAGE_SIZE, items.length - visibleCount)} de plus ({items.length - visibleCount} restants)
+          </button>
         )}
       </div>
     </motion.div>
