@@ -99,7 +99,7 @@ export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-2">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 flex-wrap pb-2 border-b" style={{ borderColor: `${fg}25` }}>
+      <div className="flex items-center gap-1 pb-2 border-b" style={{ borderColor: `${fg}25`, overflowX: 'auto', flexWrap: 'nowrap' }}>
         {TOOLBAR.map((tool, i) => (
           <button
             key={i}

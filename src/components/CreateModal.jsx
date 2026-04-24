@@ -233,7 +233,7 @@ export default function CreateModal({
                   }}
                 >
                   <option value="">Aucun dossier</option>
-                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  {folders.map(f => <option key={f.id} value={f.id} title={f.name}>{f.name}</option>)}
                 </select>
               </>
             )}

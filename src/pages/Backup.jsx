@@ -99,7 +99,11 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
     setStatus('loading');
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+      /* Defer JSON.parse off the current microtask so the "loading" UI renders
+         before the main thread blocks on large (≥ 10 MB) files. */
+      const data = await new Promise((resolve, reject) =>
+        setTimeout(() => { try { resolve(JSON.parse(text)); } catch (e) { reject(e); } }, 0)
+      );
       /* Schema validation */
       if (!data || typeof data !== 'object') throw new Error('Format invalide : fichier JSON attendu.');
       if (!Array.isArray(data.notes)) throw new Error('Format invalide : tableau "notes" manquant.');

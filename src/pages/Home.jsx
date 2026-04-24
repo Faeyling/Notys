@@ -172,6 +172,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const [renameError, setRenameError]     = useState(false);
   const [dragStatus, setDragStatus]       = useState('');
   const [quotaError, setQuotaError]       = useState(false);
+  const [deleteToast, setDeleteToast]     = useState(false);
   const [showCreate, setShowCreate]       = useState(false);
   const [createType, setCreateType]       = useState('note');
   const [openNote, setOpenNote]           = useState(null);
@@ -450,8 +451,10 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       } else {
         await NoteDB.delete(item.id);
       }
-      /* Confetti only fires after the DB confirms the delete */
+      /* Confetti + toast only fire after the DB confirms the delete */
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 }, colors: [item.color, '#fff', '#ffc7ee'] });
+      setDeleteToast(true);
+      setTimeout(() => setDeleteToast(false), 2000);
     } catch {
       /* DB failed — restore the item in the UI (notes were never changed) */
       if (isFolder) setFolders(prev => [...prev, item]);
@@ -630,7 +633,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   return (
     <div
       className={`flex ${landscape ? 'flex-row' : 'flex-col'} relative overflow-hidden`}
-      style={{ height: '100dvh', background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: landscape ? 'none' : 480, margin: '0 auto' }}
+      style={{ height: '100dvh', background: pageBg, fontFamily: 'Quicksand, sans-serif', maxWidth: landscape ? 'none' : 560, margin: '0 auto' }}
     >
       <DotGrid dark={dark} />
 
@@ -653,8 +656,12 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         >
           {/* Top bar + sort bar in one block so sort flows naturally below title */}
           <div
-            className="relative z-10 px-4 pb-8"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}
+            className="relative z-10 pb-8"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)',
+              paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
+              paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))',
+            }}
           >
             {/* Title row */}
             <div className="flex items-center justify-between mb-1">
@@ -874,7 +881,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       {/* ── FAB ── */}
       <div
         className="fixed z-40"
-        style={{ bottom: 86, right: 20 }}
+        style={{ bottom: 86, right: 'calc(20px + env(safe-area-inset-right, 0px))' }}
         onKeyDown={e => { if (e.key === 'Escape' && showFab) { setShowFab(false); } }}
       >
         <AnimatePresence>
@@ -1138,6 +1145,31 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             role="alert"
           >
             ✏️ Renommage échoué — réessaie
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete success toast */}
+      <AnimatePresence>
+        {deleteToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
+            style={{
+              background: 'rgba(34,197,94,0.9)',
+              backdropFilter: 'blur(8px)',
+              color: 'white',
+              fontFamily: 'Quicksand, sans-serif',
+              fontSize: 12,
+              fontWeight: 700,
+              maxWidth: 'calc(100vw - 32px)',
+              textAlign: 'center',
+            }}
+            role="status"
+          >
+            🗑️ Supprimé
           </motion.div>
         )}
       </AnimatePresence>

@@ -534,7 +534,7 @@ export default function NoteDetail({
                 />
                 <p
                   className="text-xs text-center mt-6 select-none"
-                  style={{ color: textFg, opacity: 0.25, fontFamily: 'Quicksand, sans-serif' }}
+                  style={{ color: textFg, opacity: 0.5, fontFamily: 'Quicksand, sans-serif' }}
                 >
                   ✏️ double appui pour modifier
                 </p>

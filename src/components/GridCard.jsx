@@ -33,7 +33,7 @@ export default function GridCard({
   const isDarkNote = dark && type === 'note';
   const cardBg     = isDarkNote ? '#1a1a2e' : pal.bg;
   const titleColor = isDarkNote ? pal.bg    : pal.fg;
-  const metaColor  = isDarkNote ? `${pal.bg}99` : `${pal.fg}99`;
+  const metaColor  = isDarkNote ? `${pal.bg}cc` : `${pal.fg}cc`;
   const cardBorder = isDarkNote ? `1px solid ${pal.bg}40` : 'none';
 
   const stopProp = fn => e => { e.stopPropagation(); fn(e); };
@@ -104,7 +104,7 @@ export default function GridCard({
             : isDarkNote
               ? `0 2px 10px rgba(0,0,0,0.3)`
               : `0 3px 14px ${pal.bg}88`,
-          transform: isDragging ? 'scale(1.05) rotate(2deg)' : undefined,
+          transform: isDragging ? 'translateY(-8px) scale(1.05) rotate(2deg)' : undefined,
           height: 96,
           display: 'flex',
           flexDirection: 'column',
@@ -139,8 +139,8 @@ export default function GridCard({
                 }}
                 onClick={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}
-                className="w-full bg-transparent outline-none border-b font-bold text-xs leading-tight"
-                style={{ color: titleColor, borderColor: `${titleColor}60`, fontFamily: '"Quicksand", sans-serif' }}
+                className="w-full outline-none border-b font-bold text-xs leading-tight rounded px-1"
+                style={{ color: titleColor, borderColor: `${titleColor}60`, background: 'rgba(0,0,0,0.15)', fontFamily: '"Quicksand", sans-serif' }}
               />
             ) : (
               <p
