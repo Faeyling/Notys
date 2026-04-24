@@ -245,6 +245,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     try { localStorage.setItem('notys-sort', sortId); } catch { /* quota or security */ }
   }, [sortId]);
 
+  /* Scroll reset on tab change */
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+  }, [tab]);
+
   /* Sync browser/OS status-bar color with the active tab wave color */
   useEffect(() => {
     const color = PAGE_WAVE_COLORS[tab] || PAGE_WAVE_COLORS.home;
@@ -554,7 +559,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         if (note) {
           handleMove({ ...note, _type: 'note' }, targetFolder);
           setDragStatus(`Note déplacée dans le dossier ${targetFolder.name}`);
-          setTimeout(() => setDragStatus(''), 3000);
+          setTimeout(() => setDragStatus(''), 5000);
         }
       }
       return;
@@ -589,7 +594,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         .catch(async () => {
           /* DB writes failed — reload authoritative state and notify user */
           setDragStatus('Réorganisation annulée');
-          setTimeout(() => setDragStatus(''), 3000);
+          setTimeout(() => setDragStatus(''), 5000);
           setDragError(true);
           setTimeout(() => setDragError(false), 3000);
           const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
@@ -683,7 +688,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                   onClick={() => setShowSort(v => !v)}
                   aria-label="Trier les notes"
                   aria-expanded={showSort}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
                   <SlidersHorizontal size={15} style={{ color: '#374151' }} />
@@ -691,7 +696,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 <button
                   onClick={() => setDark(v => !v)}
                   aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
                   {dark
@@ -701,7 +706,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 <button
                   onClick={() => setShowHelp(true)}
                   aria-label="Aide"
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-90"
                   style={{ background: 'rgba(0,0,0,0.08)' }}
                 >
                   <HelpCircle size={15} style={{ color: '#374151' }} />
@@ -1019,10 +1024,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         show={!!colorTarget}
         item={colorTarget}
         onClose={() => setColorTarget(null)}
-        onChange={handleColorChange}   /* (item, color) → DB update */
+        onChange={handleColorChange}
+        dark={dark}
       />
 
-      <HelpModal show={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpModal show={showHelp} onClose={() => setShowHelp(false)} dark={dark} />
 
       <BackupReminderModal
         show={showBackupReminder}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Home, Star, Search, HardDrive, Plus, SlidersHorizontal, Palette, Save } from 'lucide-react';
 
@@ -44,7 +45,34 @@ const SECTIONS = [
   },
 ];
 
-export default function HelpModal({ show, onClose }) {
+export default function HelpModal({ show, onClose, dark = false }) {
+  const modalRef     = useRef(null);
+  const closeRef     = useRef(null);
+  const prevFocusRef = useRef(null);
+
+  useEffect(() => {
+    if (show) {
+      prevFocusRef.current = document.activeElement;
+      setTimeout(() => closeRef.current?.focus(), 50);
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus?.();
+      prevFocusRef.current = null;
+    }
+  }, [show]);
+
+  const trapFocus = (e) => {
+    if (e.key === 'Escape') { onClose(); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(
+      modalRef.current?.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])') || []
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last  = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+
   return (
     <AnimatePresence>
       {show && (
@@ -55,45 +83,57 @@ export default function HelpModal({ show, onClose }) {
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)' }}
           onClick={onClose}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aide de Noty's"
         >
           <motion.div
+            ref={modalRef}
+            tabIndex={-1}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 26, stiffness: 280 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-lg rounded-t-3xl shadow-2xl overflow-hidden"
-            style={{ background: 'white', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+            onKeyDown={trapFocus}
+            className="w-full max-w-lg rounded-t-3xl shadow-2xl overflow-hidden outline-none"
+            style={{ background: dark ? '#2d2d4a' : 'white', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
           >
             <div className="flex items-center justify-between p-6 pb-4 shrink-0">
               <div>
-                <h2 className="font-bold text-lg" style={{ fontFamily: '"Cherry Bomb One", cursive', color: '#111827' }}>
+                <h2 className="font-bold text-lg" style={{ fontFamily: '"Cherry Bomb One", cursive', color: dark ? '#f0f0f0' : '#111827' }}>
                   Noty's — Aide
                 </h2>
                 <p className="text-xs" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>
                   Tout ce que tu dois savoir 🐾
                 </p>
               </div>
-              <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: '#F5F5F5' }}>
-                <X size={17} style={{ color: '#6B7280' }} />
+              <button
+                ref={closeRef}
+                onClick={onClose}
+                aria-label="Fermer"
+                className="w-9 h-9 rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500"
+                style={{ background: dark ? '#374151' : '#F5F5F5' }}
+              >
+                <X size={17} style={{ color: dark ? '#9CA3AF' : '#6B7280' }} />
               </button>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 pb-10 flex flex-col gap-4">
               {SECTIONS.map(({ icon: Icon, color, fg, title, desc }) => (
-                <div key={title} className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: `${color}33` }}>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: color }}>
-                    <Icon size={17} style={{ color: fg }} />
+                <div key={title} className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: dark ? `${color}22` : `${color}33` }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: dark ? `${color}55` : color }}>
+                    <Icon size={17} style={{ color: dark ? color : fg }} aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="font-bold text-sm mb-0.5" style={{ fontFamily: 'Quicksand, sans-serif', color: fg }}>{title}</p>
-                    <p className="text-xs leading-relaxed" style={{ fontFamily: 'Quicksand, sans-serif', color: '#4B5563' }}>{desc}</p>
+                    <p className="font-bold text-sm mb-0.5" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? color : fg }}>{title}</p>
+                    <p className="text-xs leading-relaxed" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#d1d5db' : '#4B5563' }}>{desc}</p>
                   </div>
                 </div>
               ))}
 
-              <div className="rounded-2xl p-4 text-center" style={{ background: '#FFF3A2', border: '1.5px dashed #713f12' }}>
-                <p className="text-xs font-semibold" style={{ color: '#713f12', fontFamily: 'Quicksand, sans-serif' }}>
+              <div className="rounded-2xl p-4 text-center" style={{ background: dark ? 'rgba(255,243,162,0.12)' : '#FFF3A2', border: '1.5px dashed #713f12' }}>
+                <p className="text-xs font-semibold" style={{ color: dark ? '#ffe0a0' : '#713f12', fontFamily: 'Quicksand, sans-serif' }}>
                   ⚠️ Tes notes sont stockées <strong>uniquement sur cet appareil</strong>.<br/>
                   Pense à exporter régulièrement !
                 </p>

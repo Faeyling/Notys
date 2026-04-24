@@ -1,8 +1,12 @@
 import { PALETTE } from '@/lib/constants';
 
 export default function ColorPicker({ value, onChange, dark }) {
+  const selected = PALETTE.find(p => p.bg === value);
   return (
     <div className="flex gap-3 flex-wrap">
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {selected ? `Couleur sélectionnée : ${selected.name}` : ''}
+      </span>
       {PALETTE.map(p => (
         <button
           key={p.bg}

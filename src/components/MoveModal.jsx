@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Folder, Home } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 
-export default function MoveModal({ show, item, folders = [], onClose, onMove }) {
+export default function MoveModal({ show, item, folders = [], onClose, onMove, dark = false }) {
   const modalRef     = useRef(null);
   const prevFocusRef = useRef(null);
 
@@ -55,32 +55,33 @@ export default function MoveModal({ show, item, folders = [], onClose, onMove })
           onClick={e => e.stopPropagation()}
           onKeyDown={trapFocus}
           className="w-full max-w-lg rounded-t-3xl p-6 pb-10 shadow-2xl outline-none"
-          style={{ background: 'white', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}
+          style={{ background: dark ? '#2d2d4a' : 'white', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}
         >
           <div className="flex items-center justify-between mb-4 shrink-0">
-            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
               Déplacer vers...
             </h2>
             <button
               onClick={onClose}
               aria-label="Fermer"
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: '#F5F5F5' }}
+              className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
+              style={{ background: dark ? '#374151' : '#F5F5F5' }}
             >
-              <X size={16} style={{ color: '#6B7280' }} />
+              <X size={16} style={{ color: dark ? '#9CA3AF' : '#6B7280' }} />
             </button>
           </div>
 
           <div className="overflow-y-auto flex-1 flex flex-col gap-2">
             <button
               onClick={() => { onMove(item, null); onClose(); }}
+              aria-label="Déplacer vers l'accueil (pas de dossier)"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-              style={{ background: '#F9FAFB', border: '1.5px solid #E5E7EB' }}
+              style={{ background: dark ? '#374151' : '#F9FAFB', border: `1.5px solid ${dark ? '#4b5563' : '#E5E7EB'}` }}
             >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#E5E7EB' }}>
-                <Home size={15} style={{ color: '#374151' }} aria-hidden="true" />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: dark ? '#4b5563' : '#E5E7EB' }}>
+                <Home size={15} style={{ color: dark ? '#d1d5db' : '#374151' }} aria-hidden="true" />
               </div>
-              <span className="font-semibold text-sm" style={{ fontFamily: 'Quicksand, sans-serif', color: '#374151' }}>
+              <span className="font-semibold text-sm" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#374151' }}>
                 Accueil (pas de dossier)
               </span>
             </button>
@@ -91,6 +92,7 @@ export default function MoveModal({ show, item, folders = [], onClose, onMove })
                 <button
                   key={f.id}
                   onClick={() => { onMove(item, f); onClose(); }}
+                  aria-label={`Déplacer vers ${f.name}`}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
                   style={{ background: `${pal.bg}33`, border: `1.5px solid ${pal.bg}` }}
                 >

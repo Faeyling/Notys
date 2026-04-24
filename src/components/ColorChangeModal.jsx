@@ -3,24 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import ColorPicker from './ColorPicker';
 
-export default function ColorChangeModal({ show, item, onClose, onChange }) {
-  const modalRef = useRef(null);
+export default function ColorChangeModal({ show, item, onClose, onChange, dark = false }) {
+  const modalRef     = useRef(null);
+  const prevFocusRef = useRef(null);
 
   useEffect(() => {
-    if (show) setTimeout(() => modalRef.current?.focus(), 50);
+    if (show) {
+      prevFocusRef.current = document.activeElement;
+      setTimeout(() => modalRef.current?.focus(), 50);
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus?.();
+      prevFocusRef.current = null;
+    }
   }, [show]);
 
   const trapFocus = (e) => {
+    if (e.key === 'Escape') { onClose(); return; }
     if (e.key !== 'Tab') return;
     const focusable = modalRef.current?.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
     if (!focusable?.length) return;
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault(); last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault(); first.focus();
-    }
+    const last  = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   };
 
   if (!show || !item) return null;
@@ -48,22 +53,22 @@ export default function ColorChangeModal({ show, item, onClose, onChange }) {
           onClick={e => e.stopPropagation()}
           onKeyDown={trapFocus}
           className="w-full max-w-lg rounded-t-3xl p-6 pb-10 shadow-2xl outline-none"
-          style={{ background: 'white' }}
+          style={{ background: dark ? '#2d2d4a' : 'white' }}
         >
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: '#111827' }}>
+            <h2 className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
               Changer la couleur
             </h2>
             <button
               onClick={onClose}
               aria-label="Fermer"
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: '#F5F5F5' }}
+              className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500"
+              style={{ background: dark ? '#374151' : '#F5F5F5' }}
             >
-              <X size={16} style={{ color: '#6B7280' }} />
+              <X size={16} style={{ color: dark ? '#9CA3AF' : '#6B7280' }} />
             </button>
           </div>
-          <ColorPicker value={item.color} onChange={color => { onChange(item, color); onClose(); }} />
+          <ColorPicker value={item.color} onChange={color => { onChange(item, color); onClose(); }} dark={dark} />
         </motion.div>
       </motion.div>
     </AnimatePresence>

@@ -14,7 +14,8 @@ export default function GridCard({
   const [renaming, setRenaming]   = useState(false);
   const [renameVal, setRenameVal] = useState('');
   const [playFailed, setPlayFailed] = useState(false);
-  const renameRef  = useRef(null);
+  const renameRef     = useRef(null);
+  const deleteOpenRef = useRef(null); /* button that triggered the delete confirm */
   /* Tracks the Audio instance started by THIS card so we can stop it on unmount */
   const myAudioRef = useRef(null);
 
@@ -179,7 +180,7 @@ export default function GridCard({
               </button>
             )}
             <button
-              onClick={stopProp(() => setShowDeleteConfirm(true))}
+              onClick={e => { e.stopPropagation(); deleteOpenRef.current = e.currentTarget; setShowDeleteConfirm(true); }}
               className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-110 active:scale-90"
               style={{ background: 'rgba(0,0,0,0.09)' }}
               aria-label="Supprimer"
@@ -257,7 +258,8 @@ export default function GridCard({
               aria-label="Confirmer la suppression"
               className="fixed inset-0 flex items-center justify-center px-6"
               style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9999 }}
-              onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
+              onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); deleteOpenRef.current?.focus(); }}
+              onKeyDown={e => { if (e.key === 'Escape') { setShowDeleteConfirm(false); deleteOpenRef.current?.focus(); } }}
             >
               <motion.div
                 key="delete-card"
@@ -280,7 +282,7 @@ export default function GridCard({
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); }}
+                    onClick={e => { e.stopPropagation(); setShowDeleteConfirm(false); deleteOpenRef.current?.focus(); }}
                     className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
                     style={{ background: '#F3F4F6', color: '#374151', fontFamily: 'Quicksand, sans-serif' }}
                   >

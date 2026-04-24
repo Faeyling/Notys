@@ -53,6 +53,13 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
   const [exporting, setExporting]               = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  /* Auto-dismiss status feedback after 5 s */
+  useEffect(() => {
+    if (!status || status === 'loading') return;
+    const t = setTimeout(() => setStatus(null), 5000);
+    return () => clearTimeout(t);
+  }, [status]);
+
   const pageBg   = dark ? '#1a1a2e' : '#FFFBFE';
   const textBase = dark ? '#f0f0f0' : '#111827';
 
@@ -298,15 +305,15 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
           className="rounded-3xl p-5 shadow-md"
-          style={{ background: '#b4daf3' }}
+          style={{ background: dark ? '#1e3055' : '#b4daf3' }}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(30,58,95,0.12)' }}>
-              <Download size={18} style={{ color: '#1e3a5f' }} />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(30,58,95,0.18)' }}>
+              <Download size={18} style={{ color: dark ? '#b4daf3' : '#1e3a5f' }} />
             </div>
             <div>
-              <p className="font-bold text-sm"  style={{ color: '#1e3a5f' }}>Exporter mes données</p>
-              <p className="text-xs opacity-70" style={{ color: '#1e3a5f' }}>Fichier JSON à conserver en lieu sûr</p>
+              <p className="font-bold text-sm"  style={{ color: dark ? '#b4daf3' : '#1e3a5f' }}>Exporter mes données</p>
+              <p className="text-xs opacity-70" style={{ color: dark ? '#b4daf3' : '#1e3a5f' }}>Fichier JSON à conserver en lieu sûr</p>
             </div>
           </div>
           <motion.button
@@ -328,15 +335,15 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.10 }}
           className="rounded-3xl p-5 shadow-md"
-          style={{ background: '#c9e7c3' }}
+          style={{ background: dark ? '#1a3828' : '#c9e7c3' }}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(22,101,52,0.12)' }}>
-              <Upload size={18} style={{ color: '#166534' }} />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(22,101,52,0.18)' }}>
+              <Upload size={18} style={{ color: dark ? '#c9e7c3' : '#166534' }} />
             </div>
             <div>
-              <p className="font-bold text-sm"  style={{ color: '#166534' }}>Importer des données</p>
-              <p className="text-xs opacity-80" style={{ color: '#166534' }}>Depuis un fichier exporté précédemment</p>
+              <p className="font-bold text-sm"  style={{ color: dark ? '#c9e7c3' : '#166534' }}>Importer des données</p>
+              <p className="text-xs opacity-80" style={{ color: dark ? '#c9e7c3' : '#166534' }}>Depuis un fichier exporté précédemment</p>
             </div>
           </div>
           <label
@@ -411,7 +418,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
           className="rounded-3xl p-5"
           style={{
-            background: dark ? 'rgba(255,173,173,0.08)' : 'rgba(255,173,173,0.20)',
+            background: dark ? 'rgba(255,173,173,0.18)' : 'rgba(255,173,173,0.20)',
             border: '2px solid #ffadad',
             backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,173,173,0.10) 8px, rgba(255,173,173,0.10) 16px)',
           }}

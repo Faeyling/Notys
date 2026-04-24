@@ -241,7 +241,7 @@ export default function NoteDetail({
       onClick={onClick}
       aria-label={ariaLabel}
       aria-pressed={active ?? undefined}
-      className="w-9 h-9 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-90 shrink-0"
+      className="w-9 h-9 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-90 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
       style={{ background: active ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.14)' }}
     >
       {children}
@@ -534,7 +534,7 @@ export default function NoteDetail({
                 />
                 <p
                   className="text-xs text-center mt-6 select-none"
-                  style={{ color: textFg, opacity: 0.5, fontFamily: 'Quicksand, sans-serif' }}
+                  style={{ color: textFg, opacity: 0.5, fontFamily: 'Quicksand, sans-serif', fontSize: 14 }}
                 >
                   ✏️ double appui pour modifier
                 </p>
@@ -553,6 +553,7 @@ export default function NoteDetail({
         show={showMove}
         item={note}
         folders={folders}
+        dark={dark}
         onClose={() => setShowMove(false)}
         onMove={(item, folder) => {
           onSave(note, { folder_id: folder?.id ?? null });
@@ -581,6 +582,7 @@ export default function NoteDetail({
             role="dialog"
             aria-modal="true"
             aria-label="Confirmer la suppression"
+            onKeyDown={e => e.key === 'Escape' && setShowDeleteConfirm(false)}
           >
             <motion.div
               initial={{ scale: 0.88 }}

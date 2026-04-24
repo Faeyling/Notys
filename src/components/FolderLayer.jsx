@@ -59,6 +59,8 @@ export default function FolderLayer({
 
       {/* Coloured header — drag-to-close starts here only */}
       <div
+        role="banner"
+        aria-label={`Dossier ${folder.name}`}
         className="relative shrink-0"
         style={{ background: folder.color, minHeight: 100, touchAction: 'none' }}
         onPointerDown={e => dragControls.start(e)}

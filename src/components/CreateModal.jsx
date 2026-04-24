@@ -136,7 +136,17 @@ export default function CreateModal({
           </div>
 
           {/* Type tabs */}
-          <div className="flex rounded-2xl overflow-hidden mb-5 p-1 gap-1" style={{ background: '#F5F5F5' }} role="tablist">
+          <div
+            className="flex rounded-2xl overflow-hidden mb-5 p-1 gap-1"
+            style={{ background: dark ? '#2a2a48' : '#F5F5F5' }}
+            role="tablist"
+            onKeyDown={e => {
+              const order = ['note', 'folder', 'voice'];
+              const idx = order.indexOf(type);
+              if (e.key === 'ArrowRight') { e.preventDefault(); setType(order[(idx + 1) % 3]); }
+              if (e.key === 'ArrowLeft')  { e.preventDefault(); setType(order[(idx + 2) % 3]); }
+            }}
+          >
             {tabs.map(({ id, label, Icon }) => (
               <button
                 key={id}
@@ -219,7 +229,7 @@ export default function CreateModal({
 
             {type !== 'folder' && (
               <>
-                <label className="sr-only" htmlFor="create-folder-select">Dossier</label>
+                <label htmlFor="create-folder-select" className="text-xs font-bold uppercase tracking-wider" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>Dossier</label>
                 <select
                   id="create-folder-select"
                   value={folderId}
