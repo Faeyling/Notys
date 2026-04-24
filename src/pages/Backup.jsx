@@ -112,6 +112,8 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
       if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
       if (data.folders && hasFolderCycle(data.folders)) throw new Error('Structure corrompue : cycle détecté dans les dossiers.');
 
+      let orphanedNoteCount = 0;
+
       /* ── Atomic transaction: if any step throws, IndexedDB rolls back fully ── */
       await db.transaction('rw', db.notes, db.folders, async () => {
         await db.notes.clear();
@@ -140,6 +142,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
           const { id, folder_id, ...rest } = n;
           const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
           const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
+          if (folder_id != null && !(folder_id in folderIdMap)) orphanedNoteCount++;
 
           /* Sanitise individual fields to prevent corrupt data entering the DB */
           if (typeof safeRest.title !== 'string')   safeRest.title   = '';
@@ -167,7 +170,10 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
       });
 
       setStatus('success');
-      setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !`);
+      const orphanSuffix = orphanedNoteCount > 0
+        ? ` — ${orphanedNoteCount} note${orphanedNoteCount > 1 ? 's' : ''} sans dossier (référence introuvable dans le fichier)`
+        : '';
+      setMessage(`${data.notes.length} notes et ${data.folders?.length ?? 0} dossiers importés !${orphanSuffix}`);
       onImportSuccess?.(); /* reload Home state without page refresh */
     } catch (err) {
       setStatus('error');

@@ -22,8 +22,19 @@ export default function CreateModal({
   const [attempted, setAttempted] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const modalRef  = useRef(null);
-  const titleRef  = useRef(null);
+  const modalRef     = useRef(null);
+  const titleRef     = useRef(null);
+  const prevFocusRef = useRef(null);
+
+  /* Restore focus to the triggering element when the modal closes */
+  useEffect(() => {
+    if (show) {
+      prevFocusRef.current = document.activeElement;
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus?.();
+      prevFocusRef.current = null;
+    }
+  }, [show]);
 
   useEffect(() => {
     if (show) {

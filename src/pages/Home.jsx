@@ -103,6 +103,7 @@ function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDe
                             <div
                               ref={fp.innerRef}
                               {...fp.droppableProps}
+                              aria-label={`Dossier ${item.name} — déposer ici pour déplacer`}
                               style={{
                                 borderRadius: 16,
                                 outline: fs.isDraggingOver ? `2.5px dashed ${item.color}` : '2.5px dashed transparent',
@@ -168,6 +169,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
   const [searchQ, setSearchQ]   = useState('');
 
   const [dragError, setDragError]         = useState(false);
+  const [renameError, setRenameError]     = useState(false);
+  const [dragStatus, setDragStatus]       = useState('');
   const [quotaError, setQuotaError]       = useState(false);
   const [showCreate, setShowCreate]       = useState(false);
   const [createType, setCreateType]       = useState('note');
@@ -467,6 +470,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     } catch {
       setFolders(prev => prev.map(f => f.id === item.id ? { ...f, name: oldName } : f));
       if (openFolder?.id === item.id) setOpenFolder(f => ({ ...f, name: oldName }));
+      setRenameError(true);
+      setTimeout(() => setRenameError(false), 3000);
     }
   };
 
@@ -543,7 +548,11 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       const itemId = Number(draggableId.slice(2));
       if (isNote) {
         const note = notes.find(n => n.id === itemId);
-        if (note) handleMove({ ...note, _type: 'note' }, targetFolder);
+        if (note) {
+          handleMove({ ...note, _type: 'note' }, targetFolder);
+          setDragStatus(`Note déplacée dans le dossier ${targetFolder.name}`);
+          setTimeout(() => setDragStatus(''), 3000);
+        }
       }
       return;
     }
@@ -566,6 +575,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         if (it._type === 'folder') setFolders(prev => prev.map(f => f.id === it.id ? { ...f, position: i } : f));
         else setNotes(prev => prev.map(n => n.id === it.id ? { ...n, position: i } : n));
       });
+      setDragStatus(`Élément déplacé à la position ${destination.index + 1}`);
+      setTimeout(() => setDragStatus(''), 3000);
       const writes = reordered.map((it, i) =>
         it._type === 'folder'
           ? FolderDB.update(it.id, { position: i })
@@ -574,6 +585,8 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       Promise.all(writes)
         .catch(async () => {
           /* DB writes failed — reload authoritative state and notify user */
+          setDragStatus('Réorganisation annulée');
+          setTimeout(() => setDragStatus(''), 3000);
           setDragError(true);
           setTimeout(() => setDragError(false), 3000);
           const [n, f] = await Promise.all([NoteDB.list(), FolderDB.list()]);
@@ -1071,6 +1084,9 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
           : ''}
       </span>
 
+      {/* Screen-reader announcement for drag-drop results */}
+      <span className="sr-only" aria-live="assertive" aria-atomic="true">{dragStatus}</span>
+
       {/* Drag-and-drop error toast */}
       <AnimatePresence>
         {dragError && (
@@ -1092,6 +1108,31 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
             role="alert"
           >
             ↩️ Ordre non sauvegardé — réessaie
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Rename error toast */}
+      <AnimatePresence>
+        {renameError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
+            style={{
+              background: 'rgba(220,38,38,0.85)',
+              backdropFilter: 'blur(8px)',
+              color: 'white',
+              fontFamily: 'Quicksand, sans-serif',
+              fontSize: 12,
+              fontWeight: 700,
+              maxWidth: 'calc(100vw - 32px)',
+              textAlign: 'center',
+            }}
+            role="alert"
+          >
+            ✏️ Renommage échoué — réessaie
           </motion.div>
         )}
       </AnimatePresence>

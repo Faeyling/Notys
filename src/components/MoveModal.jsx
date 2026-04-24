@@ -4,10 +4,17 @@ import { X, Folder, Home } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
 
 export default function MoveModal({ show, item, folders = [], onClose, onMove }) {
-  const modalRef = useRef(null);
+  const modalRef     = useRef(null);
+  const prevFocusRef = useRef(null);
 
   useEffect(() => {
-    if (show) setTimeout(() => modalRef.current?.focus(), 50);
+    if (show) {
+      prevFocusRef.current = document.activeElement;
+      setTimeout(() => modalRef.current?.focus(), 50);
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus?.();
+      prevFocusRef.current = null;
+    }
   }, [show]);
 
   const trapFocus = (e) => {

@@ -33,6 +33,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
   const audioCtxRef   = useRef(null);
   const streamRef     = useRef(null);   // keeps track of the mic stream for cleanup
   const modalRef      = useRef(null);
+  const prevFocusRef  = useRef(null);
 
   const pal = PALETTE.find(p => p.bg === color) || PALETTE[8];
 
@@ -48,10 +49,14 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
     }
   }, [show, note?.audio_data]);
 
-  /* Focus trap */
+  /* Focus trap + focus restoration */
   useEffect(() => {
     if (show) {
+      prevFocusRef.current = document.activeElement;
       setTimeout(() => modalRef.current?.focus(), 50);
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus?.();
+      prevFocusRef.current = null;
     }
   }, [show]);
 
