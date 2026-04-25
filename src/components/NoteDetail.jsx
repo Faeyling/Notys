@@ -37,6 +37,12 @@ export default function NoteDetail({
   const saveStateTimer  = useRef(null);
   const audioRef        = useRef(null);
   const saveTimer       = useRef(null);
+  const deleteCancelRef = useRef(null);
+
+  /* Focus the cancel button when the delete dialog opens */
+  useEffect(() => {
+    if (showDeleteConfirm) setTimeout(() => deleteCancelRef.current?.focus(), 50);
+  }, [showDeleteConfirm]);
   /* isDirtyRef: prevents a pointless DB write on unmount when the user only read the note */
   const isDirtyRef      = useRef(false);
   /* pendingCaretRef: position to restore in the textarea after double-tap-to-edit */
@@ -449,7 +455,7 @@ export default function NoteDetail({
                 className="w-full bg-transparent outline-none border-b text-lg font-bold"
                 style={{
                   color: pal.fg,
-                  borderColor: `${pal.fg}40`,
+                  borderColor: `${pal.fg}70`,
                   fontFamily: 'Quicksand, sans-serif',
                   fontWeight: 700,
                 }}
@@ -589,6 +595,14 @@ export default function NoteDetail({
               animate={{ scale: 1 }}
               className="rounded-3xl p-6 w-full max-w-xs shadow-2xl text-center"
               style={{ background: dark ? '#2d2d4a' : 'white' }}
+              onKeyDown={e => {
+                if (e.key !== 'Tab') return;
+                const btns = [deleteCancelRef.current, e.currentTarget.querySelector('button:last-child')].filter(Boolean);
+                if (!btns.length) return;
+                const first = btns[0], last = btns[btns.length - 1];
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+              }}
             >
               <p
                 className="font-bold text-base mb-1"
@@ -601,6 +615,7 @@ export default function NoteDetail({
               </p>
               <div className="flex gap-3">
                 <button
+                  ref={deleteCancelRef}
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 py-2.5 rounded-2xl font-semibold text-sm"
                   style={{

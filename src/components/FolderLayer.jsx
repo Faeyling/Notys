@@ -104,6 +104,7 @@ export default function FolderLayer({
                 <div
                   ref={prov.innerRef}
                   {...prov.droppableProps}
+                  aria-label={`Contenu du dossier ${folder.name}`}
                   className="grid gap-3"
                   style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
                 >
@@ -137,13 +138,18 @@ export default function FolderLayer({
           </DragDropContext>
         )}
         {items.length > visibleCount && (
-          <button
-            onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-            className="w-full mt-4 py-2.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
-            style={{ background: `${pal.fg}18`, color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
-          >
-            Voir {Math.min(PAGE_SIZE, items.length - visibleCount)} de plus ({items.length - visibleCount} restants)
-          </button>
+          <>
+            <span className="sr-only" aria-live="polite" aria-atomic="true">
+              {`${visibleCount} éléments affichés sur ${items.length}`}
+            </span>
+            <button
+              onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+              className="w-full mt-4 py-2.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+              style={{ background: `${pal.fg}18`, color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
+            >
+              Voir {Math.min(PAGE_SIZE, items.length - visibleCount)} de plus ({items.length - visibleCount} restants)
+            </button>
+          </>
         )}
       </div>
     </motion.div>

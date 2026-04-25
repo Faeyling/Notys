@@ -150,6 +150,7 @@ export default function CreateModal({
             {tabs.map(({ id, label, Icon }) => (
               <button
                 key={id}
+                id={`create-tab-${id}`}
                 role="tab"
                 aria-selected={type === id}
                 aria-controls="create-modal-panel"
@@ -166,7 +167,7 @@ export default function CreateModal({
             ))}
           </div>
 
-          <div id="create-modal-panel" role="tabpanel" className="space-y-3">
+          <div id="create-modal-panel" role="tabpanel" aria-labelledby={`create-tab-${type}`} className="space-y-3">
             <label className="sr-only" htmlFor="create-title">
               {type === 'folder' ? 'Nom du dossier' : 'Titre de la note'} *
             </label>

@@ -2,7 +2,7 @@ import { SORT_OPTIONS } from '@/lib/constants';
 
 export default function SortMenu({ value, onChange }) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+    <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
       {SORT_OPTIONS.map(opt => (
         <button
           key={opt.id}

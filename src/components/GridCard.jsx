@@ -140,7 +140,7 @@ export default function GridCard({
                 }}
                 onClick={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}
-                className="w-full outline-none border-b font-bold text-xs leading-tight rounded px-1"
+                className="w-full outline-none border-b font-bold text-xs leading-tight rounded px-1 py-1"
                 style={{ color: titleColor, borderColor: `${titleColor}60`, background: 'rgba(0,0,0,0.15)', fontFamily: '"Quicksand", sans-serif' }}
               />
             ) : (
@@ -215,7 +215,7 @@ export default function GridCard({
                 aria-label={playFailed ? 'Lecture impossible' : 'Écouter la note vocale'}
                 title={playFailed ? 'Lecture impossible' : undefined}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90"
-                style={{ background: playFailed ? 'rgba(220,38,38,0.18)' : 'rgba(0,0,0,0.12)' }}
+                style={{ background: playFailed ? 'rgba(220,38,38,0.18)' : 'rgba(0,0,0,0.12)', transition: 'background 0.2s' }}
               >
                 {playFailed
                   ? <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>✕</span>

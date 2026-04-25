@@ -283,6 +283,11 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
              phase === 'converting' ? 'Traitement…' :
              phase === 'preview'    ? 'Écouter' : 'Note vocale'}
           </p>
+          <span className="sr-only" aria-live="assertive" aria-atomic="true">
+            {phase === 'recording'  ? 'Enregistrement en cours' :
+             phase === 'converting' ? 'Traitement de l\'audio en cours' :
+             phase === 'preview'    ? 'Enregistrement prêt à écouter' : ''}
+          </span>
 
           {/* Error message */}
           {error && (

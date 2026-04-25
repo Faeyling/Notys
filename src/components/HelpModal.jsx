@@ -121,7 +121,7 @@ export default function HelpModal({ show, onClose, dark = false }) {
 
             <div className="overflow-y-auto flex-1 px-6 pb-10 flex flex-col gap-4">
               {SECTIONS.map(({ icon: Icon, color, fg, title, desc }) => (
-                <div key={title} className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: dark ? `${color}22` : `${color}33` }}>
+                <div key={title} role="region" aria-label={title} className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: dark ? `${color}22` : `${color}33` }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: dark ? `${color}55` : color }}>
                     <Icon size={17} style={{ color: dark ? color : fg }} aria-hidden="true" />
                   </div>
