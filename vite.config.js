@@ -67,6 +67,25 @@ export default defineConfig({
         ],
         /* screenshots — add 2+ phone captures (9:16, min 1080×1920) before Play Store submission */
         screenshots: [],
+
+        /* App shortcuts — appear on long-press of the home screen icon on Android.
+           URLs use query params; update domain once the production URL is known. */
+        shortcuts: [
+          {
+            name: 'Nouvelle note',
+            short_name: 'Note',
+            description: 'Créer une nouvelle note',
+            url: '/?action=new-note',
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'Mes favoris',
+            short_name: 'Favoris',
+            description: 'Voir les notes favorites',
+            url: '/?tab=fav',
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
     }),
   ],

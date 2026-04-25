@@ -99,14 +99,14 @@ export default function FolderLayer({
           <EmptyFolder dark={dark} />
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId={`folder-content-${folder.id}`} direction="horizontal">
+            <Droppable droppableId={`folder-content-${folder.id}`} direction="vertical">
               {(prov) => (
                 <div
                   ref={prov.innerRef}
                   {...prov.droppableProps}
                   aria-label={`Contenu du dossier ${folder.name}`}
                   className="grid gap-3"
-                  style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
+                  style={{ gridTemplateColumns: '1fr' }}
                 >
                   {items.slice(0, visibleCount).map((item, idx) => {
                     const isFolder = item._type === 'folder';

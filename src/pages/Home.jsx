@@ -82,13 +82,13 @@ function EmptyState({ tab, hasQuery, animated, dark }) {
 function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onColorChange, onRename, onDragEnd, dark }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="main-grid" direction="horizontal">
+      <Droppable droppableId="main-grid" direction="vertical">
         {(prov) => (
           <div
             ref={prov.innerRef}
             {...prov.droppableProps}
             className="grid gap-3"
-            style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
+            style={{ gridTemplateColumns: '1fr' }}
           >
             {items.map((item, idx) => {
               const isFolder = item._type === 'folder';
@@ -777,7 +777,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
               </div>
               {favNotes.length === 0
                 ? <EmptyState tab="fav" animated={animated} dark={dark} />
-                : <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                : <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
                     {favNotes.map(n => (
                       <GridCard
                         key={n.id} item={n} type="note"
@@ -832,7 +832,7 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
                 : !searchQ
                   ? <EmptyState tab="search" animated={animated} dark={dark} />
                   : <>
-                      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                      <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
                         {searchResults.map(item => (
                           <GridCard
                             key={`${item._type}-${item.id}`}
