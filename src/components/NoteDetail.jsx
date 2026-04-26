@@ -353,9 +353,11 @@ export default function NoteDetail({
         />
 
         {/* Top bar ─ left: [back][save-indicator]  right: [all action icons] */}
+        {/* stopPropagation prevents button taps from bubbling to the drag handler above */}
         <div
           className="flex items-center justify-between px-4 pb-1 relative z-10 gap-2"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+          onPointerDown={e => e.stopPropagation()}
         >
           {/* Left group */}
           <div className="flex items-center gap-2">
