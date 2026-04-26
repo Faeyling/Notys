@@ -274,9 +274,10 @@ export default function GridCard({
                 </p>
                 <p className="text-sm text-center mb-5" style={{ color: '#6B7280' }}>
                   "{item.title || item.name}" sera supprimé définitivement.
-                  {type === 'folder' && (item._noteCount ?? 0) > 0 && (
+                  {type === 'folder' && ((item._noteCount ?? 0) > 0 || (item._folderCount ?? 0) > 0) && (
                     <><br /><span style={{ color: '#ef4444', fontSize: 12 }}>
-                      ⚠️ Les {item._noteCount} note{item._noteCount > 1 ? 's' : ''} qu'il contient seront déplacées à la racine.
+                      ⚠️{(item._noteCount ?? 0) > 0 && ` Les ${item._noteCount} note${item._noteCount > 1 ? 's' : ''} seront déplacées à la racine.`}
+                      {(item._folderCount ?? 0) > 0 && ` Les ${item._folderCount} sous-dossier${item._folderCount > 1 ? 's' : ''} seront également supprimés.`}
                     </span></>
                   )}
                 </p>

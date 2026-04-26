@@ -433,20 +433,27 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     deletingIdsRef.current.add(key);
 
     const isFolder = item._type === 'folder';
-    /* Optimistic UI update first so the card disappears immediately */
+
+    /* For folder deletes: collect the full descendant tree upfront (before any
+       state mutation) so the optimistic update and DB transaction are consistent. */
+    const allFolderIds = isFolder
+      ? new Set([item.id, ...getAllDescendantIds(item.id, folders)])
+      : null;
+
+    /* Optimistic UI update first so cards disappear immediately */
     if (isFolder) {
-      setFolders(prev => prev.filter(f => f.id !== item.id));
+      setFolders(prev => prev.filter(f => !allFolderIds.has(f.id)));
     } else {
       setNotes(prev => prev.filter(n => n.id !== item.id));
     }
     if (openNote?.id === item.id) setOpenNote(null);
     try {
       if (isFolder) {
-        /* Identify orphans before the transaction so we can update UI after */
-        const orphans = notes.filter(n => n.folder_id === item.id);
-        /* Atomic transaction: if any step fails, IndexedDB rolls back entirely */
+        /* Notes inside the deleted folder OR any of its descendant folders */
+        const orphans = notes.filter(n => n.folder_id != null && allFolderIds.has(n.folder_id));
+        /* Atomic transaction: delete all folders in the tree + un-parent their notes */
         await db.transaction('rw', db.notes, db.folders, async () => {
-          await db.folders.delete(item.id);
+          for (const fid of allFolderIds) await db.folders.delete(fid);
           for (const n of orphans) await db.notes.update(n.id, { folder_id: null });
         });
         /* Only update notes in UI after the DB transaction commits successfully */
@@ -461,9 +468,13 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
       setDeleteToast(true);
       setTimeout(() => setDeleteToast(false), 2000);
     } catch {
-      /* DB failed — restore the item in the UI (notes were never changed) */
-      if (isFolder) setFolders(prev => [...prev, item]);
-      else setNotes(prev => [...prev, item]);
+      /* DB failed — restore the removed items in the UI */
+      if (isFolder) {
+        const removedFolders = folders.filter(f => allFolderIds.has(f.id));
+        setFolders(prev => [...prev, ...removedFolders]);
+      } else {
+        setNotes(prev => [...prev, item]);
+      }
     } finally {
       deletingIdsRef.current.delete(key);
     }

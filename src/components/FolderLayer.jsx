@@ -68,7 +68,8 @@ export default function FolderLayer({
         {/* Drag handle pill */}
         <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full" style={{ background: `${pal.fg}40` }} aria-hidden="true" />
 
-        <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}>
+        {/* stopPropagation prevents button taps from bubbling to the drag handler above */}
+        <div className="flex items-center gap-3 px-4 pb-8 relative z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }} onPointerDown={e => e.stopPropagation()}>
           <button
             onClick={onClose}
             aria-label="Retour"

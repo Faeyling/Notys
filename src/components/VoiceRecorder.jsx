@@ -46,6 +46,25 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
       setAudioUrl(null);
       setElapsed(0);
       setError(null);
+    } else {
+      /* Modal closed — release mic immediately so the OS indicator turns off.
+         Mirrors the unmount cleanup but fires as soon as show becomes false
+         (the component stays mounted inside NoteDetail between openings). */
+      clearInterval(timerRef.current);
+      cancelAnimationFrame(animFrameRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      try { analyserRef.current?.disconnect(); } catch { /* already closed */ }
+      analyserRef.current = null;
+      try { srcRef.current?.disconnect(); } catch { /* already closed */ }
+      srcRef.current = null;
+      audioCtxRef.current?.close().catch(() => {});
+      audioCtxRef.current = null;
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlaying(false);
+      if (recorderRef.current?.state !== 'inactive') recorderRef.current?.stop();
+      setBars(Array(24).fill(4));
     }
   }, [show, note?.audio_data]);
 
