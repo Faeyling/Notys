@@ -2,42 +2,17 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Download, Upload, AlertTriangle, CheckCircle, Trash2, Shield, Sparkles } from 'lucide-react';
 import { NoteDB, FolderDB, db } from '@/lib/db';
-import { PALETTE, DEFAULT_COLOR } from '@/lib/constants';
 import TripleWave from '@/components/TripleWave';
 import Mascot from '@/components/Mascot';
 import DotGrid from '@/components/DotGrid';
+import {
+  NOTE_FIELDS, FOLDER_FIELDS, MAX_SUPPORTED_VERSION,
+  VALID_COLORS, VALID_NOTE_TYPES,
+  pick, hasFolderCycle, validateImportSchema, sanitiseNote,
+} from '@/lib/backupUtils';
 
 const WAVE = '#ffadad';
 const FG   = '#7f1d1d';
-
-/* ── Field whitelists — only known fields leave or enter the DB ── */
-const NOTE_FIELDS   = ['id', 'title', 'content', 'color', 'is_favorite', 'folder_id',
-                       'type', 'audio_data', 'created_date', 'updated_date',
-                       'last_opened_date', 'position'];
-const FOLDER_FIELDS = ['id', 'name', 'color', 'parent_id', 'created_date', 'updated_date', 'position'];
-const pick = (obj, fields) =>
-  Object.fromEntries(fields.filter(k => k in obj).map(k => [k, obj[k]]));
-
-const MAX_SUPPORTED_VERSION = 2;
-const VALID_COLORS = new Set(PALETTE.map(p => p.bg));
-const VALID_NOTE_TYPES = new Set(['note', 'voice']);
-
-/* ── Cycle detection — prevents infinite loops on import ── */
-function hasFolderCycle(folders) {
-  const parentMap = Object.fromEntries(
-    folders.map(f => [String(f.id), f.parent_id != null ? String(f.parent_id) : null])
-  );
-  for (const f of folders) {
-    const visited = new Set();
-    let cur = parentMap[String(f.id)];
-    while (cur != null) {
-      if (visited.has(cur)) return true;
-      visited.add(cur);
-      cur = parentMap[cur] ?? null;
-    }
-  }
-  return false;
-}
 
 export default function Backup({ onBack, dark, animated, onToggleAnimations, onImportSuccess }) {
   /* Set status-bar to the page wave color on mount, restore on unmount */
@@ -112,16 +87,7 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         setTimeout(() => { try { resolve(JSON.parse(text)); } catch (e) { reject(e); } }, 0)
       );
       /* Schema validation */
-      if (!data || typeof data !== 'object') throw new Error('Format invalide : fichier JSON attendu.');
-      if (!Array.isArray(data.notes)) throw new Error('Format invalide : tableau "notes" manquant.');
-      if (data.version !== undefined && typeof data.version !== 'number') throw new Error('Format invalide : champ "version" incorrect.');
-      /* Version compatibility — reject files from newer, potentially incompatible app versions */
-      if (data.version !== undefined && data.version > MAX_SUPPORTED_VERSION) {
-        throw new Error(`Version de sauvegarde ${data.version} non supportée (max : ${MAX_SUPPORTED_VERSION}). Mets l'application à jour.`);
-      }
-      if (data.folders !== undefined && !Array.isArray(data.folders)) throw new Error('Format invalide : tableau "folders" incorrect.');
-      if (data.notes.some(n => typeof n !== 'object' || n === null)) throw new Error('Format invalide : une ou plusieurs notes sont corrompues.');
-      if (data.folders && hasFolderCycle(data.folders)) throw new Error('Structure corrompue : cycle détecté dans les dossiers.');
+      validateImportSchema(data);
 
       let orphanedNoteCount = 0;
 
@@ -151,31 +117,9 @@ export default function Backup({ onBack, dark, animated, onToggleAnimations, onI
         /* Step 3 : insert notes (only whitelisted fields, with field sanitisation) */
         for (const n of (data.notes || [])) {
           const { id, folder_id, ...rest } = n;
-          const safeRest    = pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id'));
+          const safeRest    = sanitiseNote(pick(rest, NOTE_FIELDS.filter(k => k !== 'id' && k !== 'folder_id')));
           const newFolderId = folder_id != null ? (folderIdMap[folder_id] ?? null) : null;
           if (folder_id != null && !(folder_id in folderIdMap)) orphanedNoteCount++;
-
-          /* Sanitise individual fields to prevent corrupt data entering the DB */
-          if (typeof safeRest.title !== 'string')   safeRest.title   = '';
-          if (!VALID_COLORS.has(safeRest.color))    safeRest.color   = DEFAULT_COLOR;
-          if (!VALID_NOTE_TYPES.has(safeRest.type)) safeRest.type    = 'note';
-          if (typeof safeRest.is_favorite !== 'boolean') safeRest.is_favorite = false;
-          /* Validate audio_data: must be a data: URI for audio, ≤ 10 MB decoded.
-             String .length measures base64 chars, not bytes — measure actual decoded
-             size: 4 base64 chars → 3 bytes, minus any trailing padding chars. */
-          if (safeRest.audio_data != null) {
-            const isValidUri = typeof safeRest.audio_data === 'string' &&
-              safeRest.audio_data.startsWith('data:audio/');
-            let tooLarge = false;
-            if (isValidUri) {
-              const b64     = safeRest.audio_data.split(',')[1] ?? '';
-              const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
-              const decoded = Math.floor(b64.length * 3 / 4) - padding;
-              tooLarge = decoded > 10 * 1_048_576;
-            }
-            if (!isValidUri || tooLarge) safeRest.audio_data = null;
-          }
-
           await db.notes.add({ ...safeRest, folder_id: newFolderId });
         }
       });

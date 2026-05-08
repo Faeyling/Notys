@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { ChevronLeft, Folder } from 'lucide-react';
 import { PALETTE } from '@/lib/constants';
@@ -33,6 +33,9 @@ export default function FolderLayer({
   /* Hooks must be called before any conditional return */
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const dragControls = useDragControls();
+
+  /* Reset pagination when navigating to a different folder */
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [folder?.id]);
 
   if (!folder) return null;
   const pal    = PALETTE.find(p => p.bg === folder.color) || PALETTE[8];
@@ -141,11 +144,12 @@ export default function FolderLayer({
         {items.length > visibleCount && (
           <>
             <span className="sr-only" aria-live="polite" aria-atomic="true">
-              {`${visibleCount} éléments affichés sur ${items.length}`}
+              {`${Math.min(visibleCount, items.length)} éléments affichés sur ${items.length}`}
             </span>
             <button
-              onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-              className="w-full mt-4 py-2.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+              onClick={() => setVisibleCount(c => Math.min(c + PAGE_SIZE, items.length))}
+              disabled={visibleCount >= items.length}
+              className="w-full mt-4 py-2.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: `${pal.fg}18`, color: pal.fg, fontFamily: 'Quicksand, sans-serif' }}
             >
               Voir {Math.min(PAGE_SIZE, items.length - visibleCount)} de plus ({items.length - visibleCount} restants)

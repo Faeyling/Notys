@@ -2,14 +2,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Home as HomeIcon, Star, Search, HardDrive,
-  HelpCircle, Moon, Sun, SlidersHorizontal, Folder, FileText, Mic, X,
+  HelpCircle, Moon, Sun, SlidersHorizontal, Folder, FileText, Mic,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { db, NoteDB, FolderDB, sortItems } from '@/lib/db';
 import { PAGE_WAVE_COLORS, PALETTE } from '@/lib/constants';
 import DotGrid from '@/components/DotGrid';
 import TripleWave from '@/components/TripleWave';
-import GridCard from '@/components/GridCard';
 import CreateModal from '@/components/CreateModal';
 import NoteDetail from '@/components/NoteDetail';
 import FolderLayer from '@/components/FolderLayer';
@@ -20,7 +19,8 @@ import BackupReminderModal from '@/components/BackupReminderModal';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import Mascot from '@/components/Mascot';
 import useOrientation from '@/hooks/useOrientation';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { HomeTabView, FavTabView, SearchTabView, BackupTabView } from '@/components/home/TabViews';
+import ToastLayer from '@/components/home/ToastLayer';
 
 /* ── Cycle detection for folder moves ─────────────────── *
    Returns the Set of all descendant folder IDs of `folderId`.
@@ -57,100 +57,6 @@ function shouldShowBackupReminder() {
   }
 }
 
-/* ── Empty-state mascots ──────────────────────────────── */
-function EmptyState({ tab, hasQuery, animated, dark }) {
-  const states = {
-    home:   { variant: 'spa',     title: 'Le carnet est tout propre !',    sub: 'Noty attend ta première idée pour la colorier.' },
-    fav:    { variant: 'float',   title: 'Rien à l\'horizon.',             sub: 'Mets une ⭐ sur tes notes les plus importantes pour les voir flotter ici.' },
-    search: { variant: 'snorkel', title: hasQuery ? 'Je cherche encore…' : 'Explore tes notes !', sub: hasQuery ? 'Noty ne trouve rien. Vérifie l\'orthographe !' : 'Tape pour chercher parmi toutes tes notes.' },
-  };
-  const s = states[tab] || states.home;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-14 gap-4"
-    >
-      <Mascot variant={s.variant} size={110} animate={animated} />
-      <p className="font-bold text-base text-center" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>{s.title}</p>
-      <p className="text-sm text-center max-w-xs" style={{ fontFamily: 'Quicksand, sans-serif', color: '#9CA3AF' }}>{s.sub}</p>
-    </motion.div>
-  );
-}
-
-/* ── Unified grid with DnD ──────────────────────────── */
-function ItemGrid({ items, folders, onOpenNote, onOpenFolder, onToggleStar, onDelete, onColorChange, onRename, onDragEnd, dark }) {
-  return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="main-grid" direction="vertical">
-        {(prov) => (
-          <div
-            ref={prov.innerRef}
-            {...prov.droppableProps}
-            className="grid gap-3"
-            style={{ gridTemplateColumns: '1fr' }}
-          >
-            {items.map((item, idx) => {
-              const isFolder = item._type === 'folder';
-              const dId = `${isFolder ? 'f' : 'n'}-${item.id}`;
-              return (
-                <Draggable key={dId} draggableId={dId} index={idx}>
-                  {(p, s) => (
-                    <div ref={p.innerRef} {...p.draggableProps} {...p.dragHandleProps}>
-                      {isFolder ? (
-                        <Droppable droppableId={`folder-drop-${item.id}`}>
-                          {(fp, fs) => (
-                            <div
-                              ref={fp.innerRef}
-                              {...fp.droppableProps}
-                              aria-label={`Dossier ${item.name} — déposer ici pour déplacer`}
-                              style={{
-                                borderRadius: 16,
-                                outline: fs.isDraggingOver ? `2.5px dashed ${item.color}` : '2.5px dashed transparent',
-                                transition: 'outline 0.15s',
-                              }}
-                            >
-                              <GridCard
-                                item={{ ...item, _noteCount: folders?.find(f => f.id === item.id)?._noteCount ?? 0 }}
-                                type="folder"
-                                onOpen={() => onOpenFolder(item)}
-                                onToggleStar={() => {}}
-                                onDelete={onDelete}
-                                onColorChange={onColorChange}
-                                onRename={onRename}
-                                isDragging={s.isDragging}
-                                dark={dark}
-                              />
-                              {fp.placeholder}
-                            </div>
-                          )}
-                        </Droppable>
-                      ) : (
-                        <GridCard
-                          item={item}
-                          type="note"
-                          onOpen={onOpenNote}
-                          onToggleStar={onToggleStar}
-                          onDelete={onDelete}
-                          onColorChange={onColorChange}
-                          isDragging={s.isDragging}
-                          dark={dark}
-                        />
-                      )}
-                    </div>
-                  )}
-                </Draggable>
-              );
-            })}
-            {prov.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
-  );
-}
-
-/* Maximum search results rendered at once — prevents UI freeze on large datasets */
 const MAX_SEARCH_RESULTS = 120;
 
 /* ── Main App ─────────────────────────────────────────── */
@@ -752,145 +658,51 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         onScroll={onScroll}
       >
         <AnimatePresence mode="wait">
-
-          {/* HOME */}
           {tab === 'home' && (
-            <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
-              {/* Mini Noty + section label — mirrors the Favorites header */}
-              <div className="flex items-center gap-2 mb-4">
-                <Mascot variant="spa" size={50} animate={animated} aria-hidden="true" />
-                <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>Notes &amp; Dossiers</h2>
-              </div>
-              {homeItems.length === 0
-                ? <EmptyState tab="home" animated={animated} dark={dark} />
-                : <ItemGrid
-                    items={homeItems}
-                    folders={foldersWithCount}
-                    onOpenNote={openNoteDetail}
-                    onOpenFolder={f => setOpenFolder(f)}
-                    onToggleStar={handleToggleStar}
-                    onDelete={handleDelete}
-                    onColorChange={item => setColorTarget(item)}
-                    onRename={handleRename}
-                    onDragEnd={handleDragEnd}
-                    dark={dark}
-                  />
-              }
-            </motion.div>
+            <HomeTabView
+              homeItems={homeItems}
+              foldersWithCount={foldersWithCount}
+              onOpenNote={openNoteDetail}
+              onOpenFolder={f => setOpenFolder(f)}
+              onToggleStar={handleToggleStar}
+              onDelete={handleDelete}
+              onColorChange={item => setColorTarget(item)}
+              onRename={handleRename}
+              onDragEnd={handleDragEnd}
+              dark={dark}
+              animated={animated}
+            />
           )}
-
-          {/* FAVORITES */}
           {tab === 'fav' && (
-            <motion.div key="fav" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Mascot variant={favNotes.length > 0 ? 'stars' : 'float'} size={50} animate={animated} aria-hidden="true" />
-                <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}>Favoris</h2>
-              </div>
-              {favNotes.length === 0
-                ? <EmptyState tab="fav" animated={animated} dark={dark} />
-                : <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
-                    {favNotes.map(n => (
-                      <GridCard
-                        key={n.id} item={n} type="note"
-                        onOpen={openNoteDetail}
-                        onToggleStar={handleToggleStar}
-                        onDelete={handleDelete}
-                        onColorChange={item => setColorTarget(item)}
-                        dark={dark}
-                      />
-                    ))}
-                  </div>
-              }
-            </motion.div>
+            <FavTabView
+              favNotes={favNotes}
+              onOpenNote={openNoteDetail}
+              onToggleStar={handleToggleStar}
+              onDelete={handleDelete}
+              onColorChange={item => setColorTarget(item)}
+              dark={dark}
+              animated={animated}
+            />
           )}
-
-          {/* SEARCH */}
           {tab === 'search' && (
-            <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <Mascot variant="snorkel" size={42} animate={animated} aria-hidden="true" />
-                <div className="relative flex-1">
-                  <label htmlFor="home-search-input" className="sr-only">Rechercher tes notes</label>
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#9CA3AF' }} />
-                  <input
-                    id="home-search-input"
-                    value={searchQ}
-                    onChange={e => setSearchQ(e.target.value)}
-                    placeholder="Rechercher..."
-                    autoFocus
-                    className="w-full pl-9 py-2.5 rounded-2xl text-sm outline-none border-2"
-                    style={{
-                      paddingRight: searchQ ? '2.25rem' : '1rem',
-                      borderColor: '#b4daf3',
-                      background: '#b4daf322',
-                      color: dark ? '#f0f0f0' : '#111827',
-                      fontFamily: 'Quicksand, sans-serif',
-                    }}
-                  />
-                  {searchQ && (
-                    <button
-                      onClick={() => setSearchQ('')}
-                      aria-label="Effacer la recherche"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-all hover:scale-110 active:scale-90"
-                    >
-                      <X size={14} style={{ color: '#9CA3AF' }} />
-                    </button>
-                  )}
-                </div>
-              </div>
-              {searchQ && searchResults.length === 0
-                ? <EmptyState tab="search" hasQuery animated={animated} dark={dark} />
-                : !searchQ
-                  ? <EmptyState tab="search" animated={animated} dark={dark} />
-                  : <>
-                      <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
-                        {searchResults.map(item => (
-                          <GridCard
-                            key={`${item._type}-${item.id}`}
-                            item={item}
-                            type={item._type}
-                            onOpen={item._type === 'folder' ? f => setOpenFolder(f) : openNoteDetail}
-                            onToggleStar={item._type === 'note' ? handleToggleStar : () => {}}
-                            onDelete={handleDelete}
-                            onColorChange={i => setColorTarget(i)}
-                            onRename={handleRename}
-                            dark={dark}
-                          />
-                        ))}
-                      </div>
-                      {searchResults.length >= MAX_SEARCH_RESULTS && (
-                        <p
-                          className="text-xs text-center pt-2"
-                          style={{ color: '#9CA3AF', fontFamily: 'Quicksand, sans-serif' }}
-                        >
-                          {searchTotal > MAX_SEARCH_RESULTS
-                            ? `${searchTotal - MAX_SEARCH_RESULTS} autre${searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} résultat${searchTotal - MAX_SEARCH_RESULTS > 1 ? 's' : ''} — affine ta recherche pour les voir`
-                            : `Affichage limité à ${MAX_SEARCH_RESULTS} résultats — affine ta recherche pour plus de précision`}
-                        </p>
-                      )}
-                    </>
-              }
-            </motion.div>
+            <SearchTabView
+              searchQ={searchQ}
+              setSearchQ={setSearchQ}
+              searchResults={searchResults}
+              searchTotal={searchTotal}
+              onOpenNote={openNoteDetail}
+              onOpenFolder={f => setOpenFolder(f)}
+              onToggleStar={handleToggleStar}
+              onDelete={handleDelete}
+              onColorChange={item => setColorTarget(item)}
+              onRename={handleRename}
+              dark={dark}
+              animated={animated}
+            />
           )}
-
-          {/* BACKUP tab */}
           {tab === 'backup' && (
-            <motion.div key="backup-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-4">
-              <Mascot variant="backpack" size={110} animate={animated} />
-              <p className="font-bold text-base" style={{ fontFamily: 'Quicksand, sans-serif', color: dark ? '#f0f0f0' : '#111827' }}>
-                Sauvegarde
-              </p>
-              <button
-                onClick={onGoBackup}
-                className="px-6 py-3 rounded-2xl font-bold text-sm"
-                style={{ background: '#ffadad', color: '#7f1d1d', fontFamily: 'Quicksand, sans-serif' }}
-              >
-                Ouvrir la sauvegarde →
-              </button>
-            </motion.div>
+            <BackupTabView onGoBackup={onGoBackup} dark={dark} animated={animated} />
           )}
-
         </AnimatePresence>
       </div>
 
@@ -1101,120 +913,18 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
         />
       )}
 
-      {/* Screen-reader announcement when the active tab changes */}
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
-        {tab === 'home' ? 'Accueil' : tab === 'fav' ? 'Favoris' : tab === 'search' ? 'Recherche' : 'Sauvegarde'}
-      </span>
-
-      {/* Screen-reader announcement when initial data finishes loading */}
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
-        {!loading && notes.length > 0
-          ? `${notes.length} note${notes.length > 1 ? 's' : ''} et ${folders.length} dossier${folders.length > 1 ? 's' : ''} chargés`
-          : ''}
-      </span>
-
-      {/* Screen-reader announcement for drag-drop results */}
-      <span className="sr-only" aria-live="assertive" aria-atomic="true">{dragStatus}</span>
-
-      {/* Drag-and-drop error toast */}
-      <AnimatePresence>
-        {dragError && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
-            style={{
-              background: dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(8px)',
-              color: 'white',
-              fontFamily: 'Quicksand, sans-serif',
-              fontSize: 12,
-              fontWeight: 700,
-              maxWidth: 'calc(100vw - 32px)',
-              textAlign: 'center',
-            }}
-            role="alert"
-          >
-            ↩️ Ordre non sauvegardé — réessaie
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Rename error toast */}
-      <AnimatePresence>
-        {renameError && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
-            style={{
-              background: 'rgba(220,38,38,0.85)',
-              backdropFilter: 'blur(8px)',
-              color: 'white',
-              fontFamily: 'Quicksand, sans-serif',
-              fontSize: 12,
-              fontWeight: 700,
-              maxWidth: 'calc(100vw - 32px)',
-              textAlign: 'center',
-            }}
-            role="alert"
-          >
-            ✏️ Renommage échoué — réessaie
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete success toast */}
-      <AnimatePresence>
-        {deleteToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
-            style={{
-              background: 'rgba(34,197,94,0.9)',
-              backdropFilter: 'blur(8px)',
-              color: 'white',
-              fontFamily: 'Quicksand, sans-serif',
-              fontSize: 12,
-              fontWeight: 700,
-              maxWidth: 'calc(100vw - 32px)',
-              textAlign: 'center',
-            }}
-            role="status"
-          >
-            🗑️ Supprimé
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Storage-full error toast */}
-      <AnimatePresence>
-        {quotaError && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-lg pointer-events-none"
-            style={{
-              background: 'rgba(220,38,38,0.85)',
-              backdropFilter: 'blur(8px)',
-              color: 'white',
-              fontFamily: 'Quicksand, sans-serif',
-              fontSize: 12,
-              fontWeight: 700,
-              maxWidth: 'calc(100vw - 32px)',
-              textAlign: 'center',
-            }}
-            role="alert"
-          >
-            💾 Stockage plein — libère de l'espace et réessaie
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ToastLayer
+        dragError={dragError}
+        renameError={renameError}
+        deleteToast={deleteToast}
+        quotaError={quotaError}
+        dragStatus={dragStatus}
+        tab={tab}
+        notes={notes}
+        folders={folders}
+        loading={loading}
+        dark={dark}
+      />
     </div>
   );
 }

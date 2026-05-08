@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, Star, Trash2, Palette, Play, Mic, Edit2 } from 'lucide-react';
@@ -7,7 +7,7 @@ import { PALETTE } from '@/lib/constants';
 /* Module-level singleton: only one audio plays at a time across all cards */
 let _activeAudio = null;
 
-export default function GridCard({
+function GridCard({
   item, type, onOpen, onToggleStar, onDelete, onColorChange, onRename, isDragging, dark,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -306,3 +306,5 @@ export default function GridCard({
     </>
   );
 }
+
+export default memo(GridCard);
