@@ -135,10 +135,12 @@ export default function NoteDetail({
       try {
         await onSaveRef.current(n, { title: t, content: c });
         setSaveState('saved');
+        /* Only auto-dismiss on success — errors stay visible until the next
+           successful write so the user knows their change wasn't persisted. */
+        saveStateTimer.current = setTimeout(() => setSaveState('idle'), 1500);
       } catch {
         setSaveState('error');
       }
-      saveStateTimer.current = setTimeout(() => setSaveState('idle'), 1500);
     }, 300);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -232,6 +234,14 @@ export default function NoteDetail({
   };
 
   const handleSaveVoice = (audioData) => {
+    /* Clear the cached Audio instance immediately so togglePlay() creates a fresh
+       one from the new audio_data prop — avoids the race where the old recording
+       plays back until the note is closed and reopened. */
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    }
     onSave(note, { audio_data: audioData });
   };
 
@@ -404,7 +414,7 @@ export default function NoteDetail({
               <IconBtn
                 onClick={() => setShowPreview(v => !v)}
                 active={showPreview}
-                ariaLabel={showPreview ? 'Masquer la prévisualisation' : 'Prévisualiser'}
+                ariaLabel={showPreview ? 'Retour à l\'éditeur' : 'Prévisualisation plein écran'}
               >
                 <Eye size={15} style={{ color: pal.fg }} />
               </IconBtn>
@@ -520,6 +530,7 @@ export default function NoteDetail({
         >
           {editing ? (
             showPreview ? (
+              /* Full-preview mode (Eye active): hides the editor entirely */
               <div
                 role="article"
                 aria-label={`Prévisualisation : ${title || 'Sans titre'}`}
@@ -528,7 +539,14 @@ export default function NoteDetail({
                 dangerouslySetInnerHTML={{ __html: renderedHtml }}
               />
             ) : (
-              <MarkdownEditor value={content} onChange={handleContentChange} fg={textFg} initialCaretOffset={pendingCaretRef.current} />
+              /* Split mode: editor on top, live rendered preview below */
+              <MarkdownEditor
+                value={content}
+                onChange={handleContentChange}
+                fg={textFg}
+                initialCaretOffset={pendingCaretRef.current}
+                previewHtml={renderedHtml}
+              />
             )
           ) : (
             content ? (

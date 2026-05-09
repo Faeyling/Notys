@@ -101,6 +101,9 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
 
   const startRecording = async () => {
     setError(null);
+    /* Show 'requesting' immediately so a second tap can't fire a second getUserMedia
+       while the browser permission prompt is still open. */
+    setPhase('requesting');
     /* Release any stream left open from a previous aborted recording before
        acquiring a new one — prevents a dangling mic indicator on the OS. */
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -219,6 +222,7 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
          does this, but we want the mic off right now, not on the next attempt. */
       stream?.getTracks().forEach(t => t.stop());
       if (streamRef.current === stream) streamRef.current = null;
+      setPhase('idle');
       if (err?.name === 'TimeoutError') {
         setError("Délai dépassé — accepte l'accès au microphone dans la popup du navigateur et réessaie.");
       } else if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
@@ -298,12 +302,14 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           style={{ background: pal.bg }}
         >
           <p className="font-bold text-base mb-4" style={{ color: pal.fg, fontFamily: '"Cherry Bomb One", cursive' }}>
-            {phase === 'recording'  ? 'Enregistrement…' :
+            {phase === 'requesting' ? 'Accès micro…' :
+             phase === 'recording'  ? 'Enregistrement…' :
              phase === 'converting' ? 'Traitement…' :
              phase === 'preview'    ? 'Écouter' : 'Note vocale'}
           </p>
           <span className="sr-only" aria-live="assertive" aria-atomic="true">
-            {phase === 'recording'  ? 'Enregistrement en cours' :
+            {phase === 'requesting' ? 'En attente d\'accès au microphone' :
+             phase === 'recording'  ? 'Enregistrement en cours' :
              phase === 'converting' ? 'Traitement de l\'audio en cours' :
              phase === 'preview'    ? 'Enregistrement prêt à écouter' : ''}
           </span>
@@ -364,10 +370,10 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={onClose}
-              disabled={phase === 'converting'}
+              disabled={phase === 'converting' || phase === 'requesting'}
               aria-label="Fermer l'enregistreur"
               className="w-11 h-11 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(0,0,0,0.12)', opacity: phase === 'converting' ? 0.4 : 1 }}
+              style={{ background: 'rgba(0,0,0,0.12)', opacity: (phase === 'converting' || phase === 'requesting') ? 0.4 : 1 }}
             >
               <X size={18} style={{ color: pal.fg }} />
             </button>
@@ -381,6 +387,20 @@ export default function VoiceRecorder({ show, note, color, onSave, onClose }) {
               >
                 <Mic size={24} style={{ color: pal.bg }} />
               </button>
+            )}
+            {phase === 'requesting' && (
+              <motion.div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: `${pal.fg}30` }}
+                aria-hidden="true"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-7 h-7 rounded-full border-4"
+                  style={{ borderColor: `${pal.fg}30`, borderTopColor: pal.fg }}
+                />
+              </motion.div>
             )}
             {phase === 'recording' && (
               <motion.button

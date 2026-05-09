@@ -39,7 +39,7 @@ const TOOLBAR = [
   { label: 'Liste numérotée', linePrefix: '1. ', text: '1.' },
 ];
 
-export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset }) {
+export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset, previewHtml }) {
   const taRef     = useRef(null);
   /* valueRef lets apply() always read the latest value without being
      recreated on every keystroke — toolbar buttons never hold stale closures. */
@@ -132,13 +132,30 @@ export default function MarkdownEditor({ value, onChange, fg, initialCaretOffset
         spellCheck
         autoCapitalize="sentences"
         autoCorrect="on"
-        className="flex-1 resize-none text-sm leading-relaxed outline-none bg-transparent"
+        className={`resize-none text-sm leading-relaxed outline-none bg-transparent${previewHtml != null ? '' : ' flex-1'}`}
         style={{
           color: fg,
           minHeight: 200,
           fontFamily: 'Quicksand, sans-serif',
         }}
       />
+
+      {previewHtml != null && (
+        <>
+          <div
+            aria-hidden="true"
+            style={{ height: 1, background: `${fg}20`, margin: '8px 0 4px' }}
+          />
+          <p className="sr-only">Aperçu du rendu</p>
+          <div
+            role="region"
+            aria-label="Aperçu du rendu Markdown"
+            className="text-sm leading-relaxed pb-4"
+            style={{ color: fg, fontFamily: 'Quicksand, sans-serif' }}
+            dangerouslySetInnerHTML={{ __html: previewHtml || '<span style="opacity:0.4;font-style:italic">L\'aperçu s\'affiche ici au fur et à mesure que tu écris…</span>' }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -148,7 +165,7 @@ export function renderMarkdown(text) {
   const safe = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(?<![*_])_([^_\n]+?)_(?![*_])/g, '<em>$1</em>')
+    .replace(/(?<![*_])_([^_\n]+)_(?![*_])/g, '<em>$1</em>')
     .replace(/&lt;u&gt;(.+?)&lt;\/u&gt;/g, '<u>$1</u>')
     .replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.08);padding:1px 4px;border-radius:4px;font-size:0.9em">$1</code>');
 

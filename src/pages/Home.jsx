@@ -38,6 +38,9 @@ function getAllDescendantIds(folderId, allFolders, maxIterations = 500) {
       }
     }
   }
+  if (queue.length) {
+    console.warn('[getAllDescendantIds] hit iteration cap — folder tree may be corrupted', folderId);
+  }
   return result;
 }
 
@@ -355,8 +358,14 @@ export default function Home({ onGoBackup, dark, setDark, animated, onRegisterBa
     if (openNote?.id === item.id) setOpenNote(null);
     try {
       if (isFolder) {
-        /* Notes inside the deleted folder OR any of its descendant folders */
-        const orphans = notes.filter(n => n.folder_id != null && allFolderIds.has(n.folder_id));
+        /* Notes inside the deleted folder OR any of its descendant folders.
+           Also catches notes with a corrupted folder_id (pointing to a folder
+           that no longer exists) — they become invisible otherwise. */
+        const existingFolderIds = new Set(folders.map(f => f.id));
+        const orphans = notes.filter(n =>
+          n.folder_id != null &&
+          (allFolderIds.has(n.folder_id) || !existingFolderIds.has(n.folder_id))
+        );
         /* Atomic transaction: delete all folders in the tree + un-parent their notes */
         await db.transaction('rw', db.notes, db.folders, async () => {
           for (const fid of allFolderIds) await db.folders.delete(fid);
